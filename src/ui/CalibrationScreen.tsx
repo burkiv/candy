@@ -21,9 +21,9 @@ export function CalibrationScreen() {
         <div className="mt-6 flex items-center justify-center gap-2 text-xs uppercase tracking-[0.22em] text-white/55">
           <span className={stepIndex >= 1 ? 'text-cyan-200' : ''}>1 Merkez</span>
           <span>/</span>
-          <span className={stepIndex >= 2 ? 'text-cyan-200' : ''}>2 Egil</span>
+          <span className={stepIndex >= 2 ? 'text-cyan-200' : ''}>2 Eğil</span>
           <span>/</span>
-          <span className={stepIndex >= 3 ? 'text-cyan-200' : ''}>3 Eli Kaldir</span>
+          <span className={stepIndex >= 3 ? 'text-cyan-200' : ''}>3 Eli Kaldır</span>
         </div>
         <div className="mx-auto mt-5 h-3 w-full max-w-xl overflow-hidden rounded-full bg-white/10">
           <div
@@ -35,8 +35,8 @@ export function CalibrationScreen() {
           %{Math.round(calibrationUi.progress * 100)}
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs uppercase tracking-[0.22em] text-cyan-200/80">
-          <span>Pose confidence {Math.round(poseConfidence * 100)}%</span>
-          <span>Esc = menu</span>
+          <span>Poz güveni {Math.round(poseConfidence * 100)}%</span>
+          <span>Esc = menü</span>
         </div>
       </div>
     </div>

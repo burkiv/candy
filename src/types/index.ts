@@ -8,6 +8,7 @@ export type GamePhase =
 
 export type ControlMode = 'KEYBOARD' | 'CAMERA';
 export type CalibrationStep = 'CENTER' | 'CROUCH' | 'READY';
+export type LeaderboardStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export type Lane = -1 | 0 | 1;
 
@@ -37,6 +38,12 @@ export interface CalibrationUiState {
   progress: number;
   title: string;
   subtitle: string;
+}
+
+export interface LeaderboardEntry {
+  name: string;
+  score: number;
+  date: string;
 }
 
 export interface Obstacle {

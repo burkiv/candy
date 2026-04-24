@@ -1,8 +1,9 @@
 import { useGLTF } from '@react-three/drei';
 import { Fragment } from 'react';
-import type { Obstacle, ObstacleType } from '../types';
+import type { Lane, Obstacle, ObstacleType } from '../types';
 import { useGameStore } from '../stores/gameStore';
 import { laneCenter, obstacleWidth } from '../utils/math';
+import { LANE_POSITIONS } from '../utils/constants';
 import { ModelAsset } from './ModelAsset';
 
 type ModelConfig = {
@@ -25,10 +26,10 @@ const OBSTACLE_GROUND_Y = 0.14;
 const MODEL_CONFIGS: Record<ObstacleType, ModelConfig> = {
   BARRIER_TOP: {
     path: '/models/barrier_top.glb',
-    targetHeight: 2.6,
-    targetDepth: 1.8,
-    scaleMultiplier: 1.32,
-    scaleYMultiplier: 1.55,
+    targetHeight: 2.12,
+    targetDepth: 1.5,
+    scaleMultiplier: 1.7,
+    scaleYMultiplier: 1.14,
     colorBoost: 1.16,
     emissiveColor: '#ffb3c9',
     emissiveIntensity: 0.16,
@@ -36,8 +37,10 @@ const MODEL_CONFIGS: Record<ObstacleType, ModelConfig> = {
   },
   BARRIER_LOW: {
     path: '/models/barrier_low.glb',
-    targetHeight: 1.15,
-    targetDepth: 1.6,
+    targetHeight: 1.26,
+    targetDepth: 1.52,
+    scaleMultiplier: 0.95,
+    scaleYMultiplier: 1.22,
     colorBoost: 1.08,
     y: OBSTACLE_GROUND_Y,
   },
@@ -65,10 +68,47 @@ const MODEL_CONFIGS: Record<ObstacleType, ModelConfig> = {
   },
 };
 
-function ModelObstacle({ obstacle }: { obstacle: Obstacle }) {
+function BarrierLaneSet({
+  obstacle,
+  config,
+}: {
+  obstacle: Obstacle;
+  config: ModelConfig;
+}) {
+  const laneWidth = 2.2;
+
+  return (
+    <group position={[0, config.y ?? 0, obstacle.z]} rotation={[0, config.rotationY ?? 0, 0]}>
+      {obstacle.lanes.map((lane) => (
+        <group key={`${obstacle.id}-${lane}`} position={[LANE_POSITIONS[lane], 0, 0]}>
+          <ModelAsset
+            path={config.path}
+            targetWidth={laneWidth}
+            targetHeight={config.targetHeight}
+            targetDepth={config.targetDepth}
+            scaleMultiplier={config.scaleMultiplier}
+            scaleYMultiplier={config.scaleYMultiplier}
+            colorBoost={config.colorBoost}
+            emissiveColor={config.emissiveColor}
+            emissiveIntensity={config.emissiveIntensity}
+            roughness={config.roughness}
+            metalness={config.metalness}
+          />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function TrainSet({
+  obstacle,
+  config,
+}: {
+  obstacle: Obstacle;
+  config: ModelConfig;
+}) {
   const width = obstacleWidth(obstacle.lanes);
   const x = laneCenter(obstacle.lanes);
-  const config = MODEL_CONFIGS[obstacle.type];
 
   return (
     <group position={[x, config.y ?? 0, obstacle.z]} rotation={[0, config.rotationY ?? 0, 0]}>
@@ -87,6 +127,16 @@ function ModelObstacle({ obstacle }: { obstacle: Obstacle }) {
       />
     </group>
   );
+}
+
+function ModelObstacle({ obstacle }: { obstacle: Obstacle }) {
+  const config = MODEL_CONFIGS[obstacle.type];
+
+  if (obstacle.type === 'BARRIER_TOP' || obstacle.type === 'BARRIER_LOW') {
+    return <BarrierLaneSet obstacle={obstacle} config={config} />;
+  }
+
+  return <TrainSet obstacle={obstacle} config={config} />;
 }
 
 export function Obstacles() {

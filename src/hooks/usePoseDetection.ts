@@ -73,7 +73,7 @@ function getErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  return 'Pose algilama baslatilamadi.';
+  return 'Pose algılama başlatılamadı.';
 }
 
 function getBodyZone(centerX: number): BodyZone {
@@ -280,7 +280,7 @@ export function usePoseDetection({
   const setPoseSquatting = useGameStore((state) => state.setPoseSquatting);
   const triggerJump = useGameStore((state) => state.triggerJump);
 
-  const [statusLabel, setStatusLabel] = useState('Kamera aciliyor');
+  const [statusLabel, setStatusLabel] = useState('Kamera açılıyor');
   const [error, setError] = useState<string | null>(null);
   const [guideZone, setGuideZone] = useState<BodyZone>('NONE');
 
@@ -355,7 +355,7 @@ export function usePoseDetection({
     async function initialize() {
       try {
         if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error('Tarayici kamera erisimi vermiyor.');
+          throw new Error('Tarayıcı kamera erişimi vermiyor.');
         }
 
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -383,7 +383,7 @@ export function usePoseDetection({
         video.srcObject = stream;
         await video.play().catch(() => undefined);
         setCameraReady(true);
-        setStatusLabel('Pose modeli yukleniyor');
+        setStatusLabel('Pose modeli yükleniyor');
 
         const poseModule: PoseModule = await import('@mediapipe/tasks-vision');
         if (cancelled) {
@@ -421,7 +421,7 @@ export function usePoseDetection({
         setStatusLabel(
           phaseRef.current === 'CALIBRATION'
             ? DEFAULT_CALIBRATION_UI.title
-            : 'Takip hazir',
+            : 'Takip hazır',
         );
       } catch (initializationError) {
         setCameraReady(false);
@@ -509,12 +509,12 @@ export function usePoseDetection({
               }
 
               if (phaseRef.current === 'CALIBRATION') {
-                resetCalibrationFlow('Kamerada daha net gorun');
+                resetCalibrationFlow('Kamerada daha net görün');
               }
 
               setStatusLabel(
                 phaseRef.current === 'CALIBRATION'
-                  ? 'Kamerada daha net gorun'
+                  ? 'Kamerada daha net görün'
                   : 'Pose bekleniyor',
               );
             } else {
@@ -532,13 +532,13 @@ export function usePoseDetection({
                 }
 
                 if (phaseRef.current === 'CALIBRATION') {
-                  resetCalibrationFlow('Biraz daha aydinlik dene');
+                  resetCalibrationFlow('Biraz daha aydınlık dene');
                 }
 
                 setStatusLabel(
                   phaseRef.current === 'CALIBRATION'
-                    ? 'Biraz daha aydinlik dene'
-                    : 'Goruntu zayif',
+                    ? 'Biraz daha aydınlık dene'
+                    : 'Görüntü zayıf',
                 );
               } else {
                 lostFramesRef.current = 0;
@@ -580,8 +580,8 @@ export function usePoseDetection({
                         'CENTER',
                         0,
                         'Ortada dik dur',
-                        'Iki cizginin arasina gecip rahat durusunu sabitle.',
-                        'Ortadaki bolgeye gec',
+                        'İki çizginin arasına geçip rahat duruşunu sabitle.',
+                        'Ortadaki bölgeye geç',
                       );
                     } else {
                       if (calibration.neutralStartedAt === 0) {
@@ -597,8 +597,8 @@ export function usePoseDetection({
                         'CENTER',
                         progress,
                         'Ortada dik dur',
-                        'Iki cizginin arasinda rahat durusunu alip sabit kal.',
-                        'Dogal durusunu aliyoruz',
+                        'İki çizginin arasında rahat duruşunu alıp sabit kal.',
+                        'Doğal duruşunu alıyoruz',
                       );
 
                       if (
@@ -618,9 +618,9 @@ export function usePoseDetection({
                         setCalibrationCopy(
                           'CROUCH',
                           0,
-                          'Simdi egil',
+                          'Şimdi eğil',
                           'Ortada kal ve hafif squat pozunda bir an sabit dur.',
-                          'Biraz egil ve bekle',
+                          'Biraz eğil ve bekle',
                         );
                       }
                     }
@@ -635,9 +635,9 @@ export function usePoseDetection({
                       setCalibrationCopy(
                         'CROUCH',
                         0,
-                        'Simdi egil',
-                        'Ortaya donup squat pozunu orada sabitle.',
-                        'Ortaya don ve egil',
+                        'Şimdi eğil',
+                        'Ortaya dönüp squat pozunu orada sabitle.',
+                        'Ortaya dön ve eğil',
                       );
                     } else {
                       const squatCandidate = isSquat(metrics, neutralBaseline);
@@ -648,9 +648,9 @@ export function usePoseDetection({
                         setCalibrationCopy(
                           'CROUCH',
                           0,
-                          'Simdi egil',
-                          'Omuz ve kalcan biraz daha asagi gelsin; squat pozunda kal.',
-                          'Biraz daha egil',
+                          'Şimdi eğil',
+                          'Omuz ve kalçan biraz daha aşağı gelsin; squat pozunda kal.',
+                          'Biraz daha eğil',
                         );
                       } else {
                         if (calibration.crouchStartedAt === 0) {
@@ -665,8 +665,8 @@ export function usePoseDetection({
                         setCalibrationCopy(
                           'CROUCH',
                           progress,
-                          'Simdi egil',
-                          'Harika. Aynen boyle bir an daha kal.',
+                          'Şimdi eğil',
+                          'Harika. Aynen böyle bir an daha kal.',
                           'Squat pozunu tut',
                         );
 
@@ -693,9 +693,9 @@ export function usePoseDetection({
                           setCalibrationCopy(
                             'READY',
                             0,
-                            'Hazir oldugunda elini kaldir',
-                            'Dik dur. Tek elini 3 saniye yukarida tutunca oyun baslayacak.',
-                            'Dik dur ve elini kaldir',
+                            'Hazır olduğunda elini kaldır',
+                            'Dik dur. Tek elini 3 saniye yukarıda tutunca oyun başlayacak.',
+                            'Dik dur ve elini kaldır',
                           );
                         }
                       }
@@ -712,18 +712,18 @@ export function usePoseDetection({
                       setCalibrationCopy(
                         'READY',
                         0,
-                        'Hazir oldugunda elini kaldir',
-                        'Dik durup ortaya yerles. Sonra tek elini yukari kaldir.',
-                        zone !== 'CENTER' ? 'Ortaya yerles' : 'Once dik dur',
+                        'Hazır olduğunda elini kaldır',
+                        'Dik durup ortaya yerleş. Sonra tek elini yukarı kaldır.',
+                        zone !== 'CENTER' ? 'Ortaya yerleş' : 'Önce dik dur',
                       );
                     } else if (!handRaised) {
                       calibration.handRaisedAt = 0;
                       setCalibrationCopy(
                         'READY',
                         0,
-                        'Hazir oldugunda elini kaldir',
-                        'Tek elini yukari kaldir ve 3 saniye boyunca indirme.',
-                        'Hazirsa elini yukari kaldir',
+                        'Hazır olduğunda elini kaldır',
+                        'Tek elini yukarı kaldır ve 3 saniye boyunca indirme.',
+                        'Hazırsa elini yukarı kaldır',
                       );
                     } else {
                       if (calibration.handRaisedAt === 0) {
@@ -737,18 +737,18 @@ export function usePoseDetection({
                       setCalibrationCopy(
                         'READY',
                         progress,
-                        'Hazir oldugunda elini kaldir',
-                        'Mukemmel. Elini 3 saniye yukarida tut ve baslayalim.',
-                        'Elini yukarida tut',
+                        'Hazır olduğunda elini kaldır',
+                        'Mükemmel. Elini 3 saniye yukarıda tut ve başlayalım.',
+                        'Elini yukarıda tut',
                       );
 
                       if (elapsed >= MOTION_CONFIG.calibrationStartHoldMs) {
                         setCalibrationCopy(
                           'READY',
                           1,
-                          'Basliyoruz',
-                          'Kalibrasyon tamamlandi. Geri sayim basladi.',
-                          'Basliyoruz',
+                          'Başlıyoruz',
+                          'Kalibrasyon tamamlandı. Geri sayım başladı.',
+                          'Başlıyoruz',
                         );
                         beginCountdown();
                       }
@@ -815,20 +815,20 @@ export function usePoseDetection({
 
                   setStatusLabel(
                     useGameStore.getState().isSquatting
-                      ? 'Egil aktif'
+                      ? 'Eğil aktif'
                       : zone === 'CENTER'
-                        ? 'Ortadasin'
+                        ? 'Ortadasın'
                         : zone === 'LEFT'
-                          ? 'Sol serit'
-                          : 'Sag serit',
+                          ? 'Sol şerit'
+                          : 'Sağ şerit',
                   );
                 } else {
                   setStatusLabel(
                     zone === 'CENTER'
-                      ? 'Ortadasin'
+                      ? 'Ortadasın'
                       : zone === 'LEFT'
                         ? 'Sol'
-                        : 'Sag',
+                        : 'Sağ',
                   );
                 }
               }

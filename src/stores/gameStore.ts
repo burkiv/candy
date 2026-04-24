@@ -8,9 +8,17 @@ import type {
   GamePhase,
   Gesture,
   Lane,
+  LeaderboardEntry,
+  LeaderboardStatus,
   Obstacle,
   ObstacleType,
 } from '../types';
+import {
+  fetchLeaderboardEntries,
+  readStoredPlayerName,
+  submitLeaderboardEntry,
+  writeStoredPlayerName,
+} from '../services/leaderboard';
 import {
   AVOID_BONUS,
   BASE_WORLD_SPEED,
@@ -53,6 +61,9 @@ type Direction = 'LEFT' | 'RIGHT';
 interface GameState {
   phase: GamePhase;
   controlMode: ControlMode | null;
+  playerName: string;
+  leaderboard: LeaderboardEntry[];
+  leaderboardStatus: LeaderboardStatus;
   countdown: number;
   score: number;
   highScore: number;
@@ -88,6 +99,9 @@ interface GameState {
   startKeyboardRun: () => void;
   startCalibration: () => void;
   restartRun: () => void;
+  setPlayerName: (name: string) => void;
+  loadLeaderboard: () => Promise<void>;
+  submitLeaderboardScore: () => Promise<void>;
   beginCountdown: () => void;
   startRun: () => void;
   pauseRun: () => void;
@@ -133,41 +147,34 @@ function saveHighScore(score: number) {
 }
 
 function createObstacle(distance: number): Obstacle {
-  const stage = distance < 180 ? 1 : distance < 420 ? 2 : 3;
-  const singleLanePatterns: Array<{ type: ObstacleType; lanes: Lane[] }> = [
-    { type: 'BARRIER_TOP', lanes: [-1] },
-    { type: 'BARRIER_TOP', lanes: [0] },
-    { type: 'BARRIER_TOP', lanes: [1] },
-    { type: 'TRAIN_SINGLE', lanes: [-1] },
-    { type: 'TRAIN_SINGLE', lanes: [0] },
-    { type: 'TRAIN_SINGLE', lanes: [1] },
+  const allLanes: Lane[] = [-1, 0, 1];
+  const doubleLanePatterns: Lane[][] = [
+    [-1, 0],
+    [0, 1],
   ];
-  const stageTwoPatterns: Array<{ type: ObstacleType; lanes: Lane[] }> = [
-    { type: 'BARRIER_LOW', lanes: [-1] },
-    { type: 'BARRIER_LOW', lanes: [0] },
-    { type: 'BARRIER_LOW', lanes: [1] },
-  ];
-  const stageThreePatterns: Array<{ type: ObstacleType; lanes: Lane[] }> = [
-    { type: 'TRAIN_DOUBLE', lanes: [-1, 0] },
-    { type: 'TRAIN_DOUBLE', lanes: [0, 1] },
-  ];
+  const roll = Math.random();
 
-  const pool = [...singleLanePatterns];
+  let type: ObstacleType;
+  let lanes: Lane[];
 
-  if (stage >= 2) {
-    pool.push(...stageTwoPatterns);
+  if (roll < 0.3) {
+    type = 'BARRIER_TOP';
+    lanes = allLanes;
+  } else if (roll < 0.6) {
+    type = 'BARRIER_LOW';
+    lanes = allLanes;
+  } else if (roll < 0.85) {
+    type = 'TRAIN_SINGLE';
+    lanes = [randomItem(allLanes)];
+  } else {
+    type = 'TRAIN_DOUBLE';
+    lanes = randomItem(doubleLanePatterns);
   }
-
-  if (stage >= 3) {
-    pool.push(...stageThreePatterns);
-  }
-
-  const pattern = randomItem(pool);
 
   return {
     id: nextObstacleId(),
-    type: pattern.type,
-    lanes: pattern.lanes,
+    type,
+    lanes,
     z: SPAWN_Z,
     passed: false,
     collisionReported: false,
@@ -187,6 +194,89 @@ function createCollectible(distance: number): Collectible {
     lane,
     z: COLLECTIBLE_SPAWN_Z,
     collected: false,
+  };
+}
+
+function createPatternCollectible(
+  lane: Lane,
+  z: number,
+  type: CollectibleType = 'COIN',
+): Collectible {
+  return {
+    id: nextCollectibleId(),
+    type,
+    lane,
+    z,
+    collected: false,
+  };
+}
+
+function createLaneRewardTrail(
+  lane: Lane,
+  startZ: number,
+  count: number,
+  spacing = 3.2,
+  finalType: CollectibleType = 'COIN',
+) {
+  return Array.from({ length: count }, (_, index) =>
+    createPatternCollectible(
+      lane,
+      startZ - index * spacing,
+      index === count - 1 ? finalType : 'COIN',
+    ),
+  );
+}
+
+function createObstacleBundle(distance: number) {
+  const obstacle = createObstacle(distance);
+  const rewardStartZ = SPAWN_Z - 8;
+  const starChance = distance < 180 ? 0.12 : distance < 420 ? 0.18 : 0.24;
+  const bonusType: CollectibleType = Math.random() < starChance ? 'STAR' : 'COIN';
+  const allLanes: Lane[] = [-1, 0, 1];
+  let collectibles: Collectible[] = [];
+
+  switch (obstacle.type) {
+    case 'BARRIER_TOP':
+    case 'BARRIER_LOW':
+      collectibles = allLanes.map((lane) =>
+        createPatternCollectible(lane, rewardStartZ, 'COIN'),
+      );
+
+      if (bonusType === 'STAR') {
+        collectibles.push(createPatternCollectible(0, rewardStartZ - 5.2, 'STAR'));
+      }
+      break;
+    case 'TRAIN_SINGLE': {
+      const safeLanes = allLanes.filter((lane) => !obstacle.lanes.includes(lane));
+      collectibles = safeLanes.flatMap((lane, index) =>
+        createLaneRewardTrail(
+          lane,
+          rewardStartZ - index * 1.4,
+          2,
+          3,
+          bonusType === 'STAR' ? 'STAR' : 'COIN',
+        ),
+      );
+      break;
+    }
+    case 'TRAIN_DOUBLE': {
+      const safeLane = allLanes.find((lane) => !obstacle.lanes.includes(lane)) ?? 0;
+      collectibles = createLaneRewardTrail(
+        safeLane,
+        rewardStartZ,
+        3,
+        3,
+        bonusType,
+      );
+      break;
+    }
+    default:
+      break;
+  }
+
+  return {
+    obstacle,
+    collectibles,
   };
 }
 
@@ -253,9 +343,12 @@ function createRunReset(
   };
 }
 
-export const useGameStore = create<GameState>((set) => ({
+export const useGameStore = create<GameState>((set, get) => ({
   phase: 'MENU',
   controlMode: null,
+  playerName: readStoredPlayerName(),
+  leaderboard: [],
+  leaderboardStatus: 'idle',
   countdown: 3,
   score: 0,
   highScore: readHighScore(),
@@ -311,6 +404,48 @@ export const useGameStore = create<GameState>((set) => ({
         highScore: state.highScore,
       };
     }),
+  setPlayerName: (name) =>
+    set({
+      playerName: writeStoredPlayerName(name),
+    }),
+  loadLeaderboard: async () => {
+    set({ leaderboardStatus: 'loading' });
+
+    try {
+      const leaderboard = await fetchLeaderboardEntries();
+      set({
+        leaderboard,
+        leaderboardStatus: 'ready',
+      });
+    } catch {
+      set({ leaderboardStatus: 'error' });
+    }
+  },
+  submitLeaderboardScore: async () => {
+    const state = get();
+    const name = state.playerName.trim();
+
+    if (!name) {
+      return;
+    }
+
+    set({ leaderboardStatus: 'loading' });
+
+    try {
+      const leaderboard = await submitLeaderboardEntry({
+        name,
+        score: state.score,
+        date: new Date().toISOString(),
+      });
+
+      set({
+        leaderboard,
+        leaderboardStatus: 'ready',
+      });
+    } catch {
+      set({ leaderboardStatus: 'error' });
+    }
+  },
   beginCountdown: () =>
     set({
       phase: 'COUNTDOWN',
@@ -663,8 +798,11 @@ export const useGameStore = create<GameState>((set) => ({
         return state;
       }
 
+      const bundle = createObstacleBundle(state.distance);
+
       return {
-        obstacles: [...state.obstacles, createObstacle(state.distance)],
+        obstacles: [...state.obstacles, bundle.obstacle],
+        collectibles: [...state.collectibles, ...bundle.collectibles],
       };
     }),
   spawnRandomCollectible: () =>

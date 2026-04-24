@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { AudioController } from './audio/AudioController';
 import { Scene } from './game/Scene';
 import { useKeyboardControls } from './hooks/useKeyboardControls';
 import { useGameStore } from './stores/gameStore';
@@ -84,6 +85,7 @@ export default function App() {
   return (
     <main className="relative h-screen overflow-hidden bg-tunnel-950 text-white">
       <PhaseFlow />
+      <AudioController />
       <Scene />
       <Overlay />
     </main>

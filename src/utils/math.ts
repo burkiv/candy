@@ -26,7 +26,10 @@ export function obstacleWidth(lanes: Lane[]): number {
     return 2.2;
   }
 
-  return Math.abs(LANE_POSITIONS[lanes[0]] - LANE_POSITIONS[lanes[1]]) + 2.2;
+  const positions = lanes.map((lane) => LANE_POSITIONS[lane]);
+  const min = Math.min(...positions);
+  const max = Math.max(...positions);
+  return Math.abs(max - min) + 2.2;
 }
 
 export function nextObstacleId(): string {

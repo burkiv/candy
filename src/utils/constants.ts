@@ -57,5 +57,5 @@ export const DEFAULT_CALIBRATION_UI: CalibrationUiState = {
   step: 'CENTER',
   progress: 0,
   title: 'Ortada dik dur',
-  subtitle: 'Iki cizginin arasinda rahat durusunu alip sabit kal.',
+  subtitle: 'İki çizginin arasında rahat duruşunu alıp sabit kal.',
 };

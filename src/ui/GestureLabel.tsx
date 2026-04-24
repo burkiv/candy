@@ -3,8 +3,8 @@ import { useGameStore } from '../stores/gameStore';
 
 const labels: Record<string, string> = {
   LEFT: 'SOL',
-  RIGHT: 'SAG',
-  SQUAT: 'EGIL',
+  RIGHT: 'SAĞ',
+  SQUAT: 'EĞİL',
   JUMP: 'ZIPLA',
 };
 
