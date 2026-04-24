@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.pnpm-store/
+.vite/
+*.log
+*.tsbuildinfo
+.DS_Store
+Thumbs.db

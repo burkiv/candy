@@ -1,0 +1,33 @@
+{
+  "name": "subway-runner-threejs",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.34",
+    "@react-three/drei": "^9.114.6",
+    "@react-three/fiber": "^8.17.10",
+    "framer-motion": "^11.18.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.174.0",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/three": "^0.174.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  },
+  "packageManager": "pnpm@10.28.2+sha512.41872f037ad22f7348e3b1debbaf7e867cfd448f2726d9cf74c08f19507c31d2c8e7a11525b983febc2df640b5438dee6023ebb1f84ed43cc2d654d2bc326264"
+}
