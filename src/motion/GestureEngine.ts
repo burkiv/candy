@@ -172,7 +172,7 @@ export function isSquat(
   const shoulderDrop = metrics.shoulderY - baseline.shoulderY;
   const torsoRatio =
     baseline.torsoHeight > 0 ? metrics.torsoHeight / baseline.torsoHeight : 1;
-  const lowerBodyVisible = metrics.lowerBodyConfidence >= 0.35;
+  const lowerBodyVisible = metrics.lowerBodyConfidence >= 0.15;
   const kneeDriven =
     lowerBodyVisible &&
     metrics.averageKneeAngle < MOTION_CONFIG.squatAngleThreshold;
@@ -198,6 +198,6 @@ export function isJump(
   return (
     shoulderLift > MOTION_CONFIG.jumpDisplacementThreshold &&
     hipLift > MOTION_CONFIG.jumpHipDisplacementThreshold &&
-    torsoRatio > 0.94
+    torsoRatio > 0.85
   );
 }
