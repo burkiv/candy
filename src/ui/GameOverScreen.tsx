@@ -14,10 +14,10 @@ export function GameOverScreen() {
     <div className="absolute inset-0 flex items-center justify-center px-4">
       <div className="w-full max-w-3xl rounded-lg border border-red-300/20 bg-black/48 p-6 shadow-hud backdrop-blur-md sm:p-8">
         <div className="text-sm uppercase tracking-[0.24em] text-red-300/80">
-          Game Over
+          Oyun Bitti
         </div>
         <div className="mt-3 text-5xl font-black leading-none sm:text-6xl">
-          Tren kacmadi.
+          Seker kosusu burada bitti.
         </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-4">
           <div className="rounded-lg border border-white/10 bg-white/5 p-4">
@@ -61,7 +61,7 @@ export function GameOverScreen() {
             onClick={returnToMenu}
             className="rounded-lg border border-white/15 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-[0.18em] text-white transition hover:bg-white/10"
           >
-            Menu
+            Ana Menu
           </button>
         </div>
       </div>

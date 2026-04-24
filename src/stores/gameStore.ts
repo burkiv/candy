@@ -23,6 +23,8 @@ import {
   DISTANCE_SCALE,
   EYE_HEIGHT,
   GESTURE_LABEL_DURATION,
+  HIT_INVULNERABILITY_DURATION,
+  HIT_SCORE_PENALTY,
   JUMP_ARC_HEIGHT,
   JUMP_DURATION,
   MAX_RUN_SPEED,
@@ -32,6 +34,7 @@ import {
   SPEED_STEP_AMOUNT,
   SPEED_STEP_DISTANCE,
   SPAWN_Z,
+  START_LIVES,
   STAR_SCORE_BONUS,
   START_RUN_SPEED,
 } from '../utils/constants';
@@ -55,6 +58,8 @@ interface GameState {
   invincibleMode: boolean;
   collisionCount: number;
   impactTimeLeft: number;
+  hitCooldownTimeLeft: number;
+  livesRemaining: number;
   currentLane: Lane;
   playerY: number;
   isSquatting: boolean;
@@ -78,6 +83,8 @@ interface GameState {
   startCalibration: () => void;
   beginCountdown: () => void;
   startRun: () => void;
+  pauseRun: () => void;
+  resumeRun: () => void;
   returnToMenu: () => void;
   setCountdown: (value: number) => void;
   setGesture: (gesture: Exclude<Gesture, null>) => void;
@@ -105,13 +112,15 @@ function readHighScore(): number {
     return 0;
   }
 
-  const raw = window.localStorage.getItem('subway-runner-high-score');
+  const raw =
+    window.localStorage.getItem('candy-run-high-score') ??
+    window.localStorage.getItem('subway-runner-high-score');
   return raw ? Number.parseInt(raw, 10) || 0 : 0;
 }
 
 function saveHighScore(score: number) {
   if (typeof window !== 'undefined') {
-    window.localStorage.setItem('subway-runner-high-score', String(score));
+    window.localStorage.setItem('candy-run-high-score', String(score));
   }
 }
 
@@ -195,9 +204,11 @@ export const useGameStore = create<GameState>((set) => ({
   time: 0,
   distance: 0,
   speed: START_RUN_SPEED,
-  invincibleMode: true,
+  invincibleMode: false,
   collisionCount: 0,
   impactTimeLeft: 0,
+  hitCooldownTimeLeft: 0,
+  livesRemaining: START_LIVES,
   currentLane: 0,
   playerY: EYE_HEIGHT,
   isSquatting: false,
@@ -228,6 +239,8 @@ export const useGameStore = create<GameState>((set) => ({
       speed: START_RUN_SPEED,
       collisionCount: 0,
       impactTimeLeft: 0,
+      hitCooldownTimeLeft: 0,
+      livesRemaining: START_LIVES,
       currentLane: 0,
       playerY: EYE_HEIGHT,
       isSquatting: false,
@@ -265,6 +278,8 @@ export const useGameStore = create<GameState>((set) => ({
       speed: START_RUN_SPEED,
       collisionCount: 0,
       impactTimeLeft: 0,
+      hitCooldownTimeLeft: 0,
+      livesRemaining: START_LIVES,
       currentLane: 0,
       playerY: EYE_HEIGHT,
       isSquatting: false,
@@ -285,6 +300,22 @@ export const useGameStore = create<GameState>((set) => ({
       baseline: state.baseline ?? DEFAULT_BASELINE,
       poseConfidence: state.poseConfidence,
     })),
+  pauseRun: () =>
+    set((state) =>
+      state.phase !== 'PLAYING'
+        ? state
+        : {
+            phase: 'PAUSED',
+          },
+    ),
+  resumeRun: () =>
+    set((state) =>
+      state.phase !== 'PAUSED'
+        ? state
+        : {
+            phase: 'PLAYING',
+          },
+    ),
   returnToMenu: () =>
     set((state) => ({
       phase: 'MENU',
@@ -295,6 +326,8 @@ export const useGameStore = create<GameState>((set) => ({
       speed: START_RUN_SPEED,
       collisionCount: 0,
       impactTimeLeft: 0,
+      hitCooldownTimeLeft: 0,
+      livesRemaining: START_LIVES,
       currentLane: 0,
       playerY: EYE_HEIGHT,
       isSquatting: false,
@@ -471,7 +504,11 @@ export const useGameStore = create<GameState>((set) => ({
             nextScore += AVOID_BONUS;
           }
 
-          if (collides && !obstacle.collisionReported) {
+          if (
+            collides &&
+            !obstacle.collisionReported &&
+            (state.invincibleMode || state.hitCooldownTimeLeft <= 0)
+          ) {
             collisionsThisFrame += 1;
           }
 
@@ -511,6 +548,7 @@ export const useGameStore = create<GameState>((set) => ({
         })
         .filter((collectible) => !collectible.collected && collectible.z < DESPAWN_Z);
       const collision = collisionsThisFrame > 0;
+      const nextHitCooldownTime = Math.max(0, state.hitCooldownTimeLeft - delta);
 
       const nextGestureTime = Math.max(0, state.gestureTimeLeft - delta);
       const nextGesture = nextGestureTime > 0 ? state.gesture : null;
@@ -519,25 +557,53 @@ export const useGameStore = create<GameState>((set) => ({
         (collision ? 0.48 : state.impactTimeLeft) - delta,
       );
 
-      if (collision && !state.invincibleMode) {
-        const finalScore = Math.floor(nextScore);
-        const nextHighScore = Math.max(state.highScore, finalScore);
-        saveHighScore(nextHighScore);
+      if (collision && !state.invincibleMode && nextHitCooldownTime <= 0) {
+        const nextLives = Math.max(0, state.livesRemaining - 1);
+        const penalizedScore = Math.max(0, nextScore - HIT_SCORE_PENALTY);
+
+        if (nextLives === 0) {
+          const finalScore = Math.floor(penalizedScore);
+          const nextHighScore = Math.max(state.highScore, finalScore);
+          saveHighScore(nextHighScore);
+
+          return {
+            phase: 'GAME_OVER' as GamePhase,
+            score: finalScore,
+            highScore: nextHighScore,
+            time: nextTime,
+            distance: nextDistance,
+            speed: nextSpeed,
+            collisionCount: state.collisionCount + collisionsThisFrame,
+            impactTimeLeft: nextImpactTime,
+            hitCooldownTimeLeft: 0,
+            livesRemaining: nextLives,
+            playerY: nextPlayerY,
+            isJumping: false,
+            jumpElapsed: 0,
+            gesture: null,
+            gestureTimeLeft: 0,
+            obstacles: movedObstacles,
+            collectibles: movedCollectibles,
+            obstaclesAvoided: avoided,
+            coinsCollected,
+            starsCollected,
+          };
+        }
 
         return {
-          phase: 'GAME_OVER' as GamePhase,
-          score: finalScore,
-          highScore: nextHighScore,
           time: nextTime,
           distance: nextDistance,
           speed: nextSpeed,
           collisionCount: state.collisionCount + collisionsThisFrame,
           impactTimeLeft: nextImpactTime,
+          hitCooldownTimeLeft: HIT_INVULNERABILITY_DURATION,
+          livesRemaining: nextLives,
+          score: penalizedScore,
           playerY: nextPlayerY,
-          isJumping: false,
-          jumpElapsed: 0,
-          gesture: null,
-          gestureTimeLeft: 0,
+          isJumping: nextIsJumping,
+          jumpElapsed: nextJumpElapsed,
+          gesture: nextGesture,
+          gestureTimeLeft: nextGestureTime,
           obstacles: movedObstacles,
           collectibles: movedCollectibles,
           obstaclesAvoided: avoided,
@@ -552,6 +618,8 @@ export const useGameStore = create<GameState>((set) => ({
         speed: nextSpeed,
         collisionCount: state.collisionCount + collisionsThisFrame,
         impactTimeLeft: nextImpactTime,
+        hitCooldownTimeLeft: nextHitCooldownTime,
+        livesRemaining: state.livesRemaining,
         score: nextScore,
         playerY: nextPlayerY,
         isJumping: nextIsJumping,

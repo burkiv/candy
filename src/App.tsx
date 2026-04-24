@@ -9,6 +9,7 @@ import { GameOverScreen } from './ui/GameOverScreen';
 import { GestureLabel } from './ui/GestureLabel';
 import { HUD } from './ui/HUD';
 import { MenuScreen } from './ui/MenuScreen';
+import { PauseScreen } from './ui/PauseScreen';
 
 function PhaseFlow() {
   const phase = useGameStore((state) => state.phase);
@@ -46,7 +47,7 @@ function Overlay() {
 
   return (
     <div className="absolute inset-0">
-      {phase === 'PLAYING' ? <HUD /> : null}
+      {phase === 'PLAYING' || phase === 'PAUSED' ? <HUD /> : null}
       {phase !== 'MENU' ? (
         <div
           className={
@@ -69,6 +70,7 @@ function Overlay() {
       {phase === 'MENU' ? <MenuScreen /> : null}
       {phase === 'CALIBRATION' ? <CalibrationScreen /> : null}
       {phase === 'COUNTDOWN' ? <CountdownScreen /> : null}
+      {phase === 'PAUSED' ? <PauseScreen /> : null}
       {phase === 'GAME_OVER' ? <GameOverScreen /> : null}
     </div>
   );

@@ -10,15 +10,15 @@ export function MenuScreen() {
         <div className="grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
           <div className="rounded-lg border border-white/10 bg-black/28 p-6 shadow-hud backdrop-blur-md sm:p-8">
             <div className="text-sm uppercase tracking-[0.28em] text-cyan-200/80">
-              First Person Endless Runner
+              First Person Candy Runner
             </div>
             <h1 className="mt-3 text-4xl font-black leading-none sm:text-6xl">
-              Subway Runner
+              Candy Run
             </h1>
             <p className="mt-5 max-w-2xl text-sm leading-6 text-white/72 sm:text-base">
-              Uc seritli tunnel kosusu hazir. Bu ilk kurulumda klavye ile
-              oynanabilir temel loop acildi; kamera katmani bunun ustune
-              eklenecek.
+              Uc seritli seker tunel kosusu hazir. Klavye ile hemen
+              oynayabilirsin; istersen kalibrasyonla kamera kontrolunu da
+              acip lane, squat ve jump hareketlerini kullanabilirsin.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <button
@@ -29,7 +29,7 @@ export function MenuScreen() {
                 Baslat
               </button>
               <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/72">
-                Enter ile de baslayabilir.
+                Enter ile baslat, Esc ile duraklat.
               </div>
             </div>
           </div>
@@ -50,6 +50,10 @@ export function MenuScreen() {
               <div className="flex items-center justify-between gap-4">
                 <span>Zipla</span>
                 <span className="font-semibold text-cyan-200">W / Space</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span>Duraklat</span>
+                <span className="font-semibold text-cyan-200">Esc</span>
               </div>
             </div>
             <div className="mt-8 rounded-lg border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">

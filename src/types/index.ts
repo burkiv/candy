@@ -3,6 +3,7 @@ export type GamePhase =
   | 'CALIBRATION'
   | 'COUNTDOWN'
   | 'PLAYING'
+  | 'PAUSED'
   | 'GAME_OVER';
 
 export type Lane = -1 | 0 | 1;

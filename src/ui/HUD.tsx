@@ -34,6 +34,7 @@ export function HUD() {
   const invincibleMode = useGameStore((state) => state.invincibleMode);
   const collisionCount = useGameStore((state) => state.collisionCount);
   const impactTimeLeft = useGameStore((state) => state.impactTimeLeft);
+  const livesRemaining = useGameStore((state) => state.livesRemaining);
   const obstaclesAvoided = useGameStore((state) => state.obstaclesAvoided);
   const coinsCollected = useGameStore((state) => state.coinsCollected);
   const starsCollected = useGameStore((state) => state.starsCollected);
@@ -52,7 +53,7 @@ export function HUD() {
     <div className="absolute left-4 top-4 pointer-events-none">
       <div className="w-[min(19rem,calc(100vw-2rem))] rounded-lg border border-white/10 bg-black/45 p-4 text-white shadow-hud backdrop-blur-md">
         <div className="text-xs uppercase tracking-[0.18em] text-cyan-200/80">
-          Run
+          Candy Run
         </div>
         <div className="mt-2 flex items-center gap-2">
           {invincibleMode ? (
@@ -98,6 +99,14 @@ export function HUD() {
             <div className="text-white/45">Sonraki Hiz</div>
             <div className="mt-1 font-semibold text-cyan-200">
               {Math.ceil(remainingToNextSpeed)} m
+            </div>
+          </div>
+          <div>
+            <div className="text-white/45">Can</div>
+            <div className="mt-1 font-semibold text-rose-200">
+              {Array.from({ length: livesRemaining })
+                .map(() => 'O')
+                .join(' ')}
             </div>
           </div>
         </div>

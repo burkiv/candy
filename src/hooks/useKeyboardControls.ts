@@ -21,10 +21,33 @@ export function useKeyboardControls() {
         startCalibration,
         beginCountdown,
         changeLane,
+        pauseRun,
+        resumeRun,
+        returnToMenu,
         setManualSquatting,
         triggerJump,
         toggleInvincibleMode,
       } = useGameStore.getState();
+      const key = event.key.toLowerCase();
+
+      if (key === 'escape' && !event.repeat) {
+        event.preventDefault();
+
+        if (phase === 'PLAYING') {
+          pauseRun();
+          return;
+        }
+
+        if (phase === 'PAUSED') {
+          resumeRun();
+          return;
+        }
+
+        if (phase === 'CALIBRATION' || phase === 'COUNTDOWN' || phase === 'GAME_OVER') {
+          returnToMenu();
+          return;
+        }
+      }
 
       if (phase === 'MENU' && event.key === 'Enter') {
         startCalibration();
@@ -41,11 +64,15 @@ export function useKeyboardControls() {
         return;
       }
 
-      if (phase !== 'PLAYING') {
+      if (phase === 'PAUSED' && key === 'm' && !event.repeat) {
+        event.preventDefault();
+        returnToMenu();
         return;
       }
 
-      const key = event.key.toLowerCase();
+      if (phase !== 'PLAYING') {
+        return;
+      }
 
       if (key === 'i' && !event.repeat) {
         event.preventDefault();

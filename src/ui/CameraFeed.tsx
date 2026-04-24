@@ -45,7 +45,7 @@ export function CameraFeed({
         className="pointer-events-none absolute inset-0 h-full w-full scale-x-[-1]"
       />
       <div className={`absolute left-3 top-3 rounded bg-black/60 px-2 py-1 font-semibold uppercase tracking-[0.18em] text-cyan-200 ${fullscreen ? 'text-xs' : 'text-[10px]'}`}>
-        Cam
+        Kamera
       </div>
       <div className={`absolute inset-x-0 flex justify-center ${fullscreen ? 'top-4' : 'top-2'}`}>
         <div className={`rounded bg-black/55 px-3 py-1 text-white/75 ${fullscreen ? 'text-sm' : 'text-[10px]'}`}>
@@ -59,7 +59,7 @@ export function CameraFeed({
             : 'bg-amber-500/20 text-amber-300'
         } ${fullscreen ? 'text-xs' : 'text-[10px]'}`}
       >
-        {cameraReady ? statusLabel : 'Warmup'}
+        {cameraReady ? statusLabel : 'Hazirlaniyor'}
       </div>
       <div className={`absolute right-3 top-3 rounded bg-black/60 px-2 py-1 font-semibold uppercase tracking-[0.18em] text-amber-200 ${fullscreen ? 'text-xs' : 'text-[10px]'}`}>
         {Math.round(poseConfidence * 100)}%

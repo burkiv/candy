@@ -13,6 +13,9 @@ export const EYE_HEIGHT = 1.6;
 export const CROUCH_HEIGHT = 0.92;
 export const JUMP_ARC_HEIGHT = 1.15;
 export const JUMP_DURATION = 0.72;
+export const START_LIVES = 3;
+export const HIT_SCORE_PENALTY = 180;
+export const HIT_INVULNERABILITY_DURATION = 1.2;
 
 export const BASE_WORLD_SPEED = 22;
 export const PREVIEW_WORLD_SPEED = 8;
