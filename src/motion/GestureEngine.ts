@@ -154,6 +154,20 @@ export function isSquat(
   metrics: ReturnType<typeof getPoseMetrics>,
   baseline: Baseline,
 ): boolean {
+  const personalizedHipThreshold =
+    typeof baseline.crouchHipY === 'number'
+      ? Math.max(
+          MOTION_CONFIG.squatHipDropThreshold * 0.65,
+          (baseline.crouchHipY - baseline.hipY) * 0.42,
+        )
+      : MOTION_CONFIG.squatHipDropThreshold;
+  const personalizedShoulderThreshold =
+    typeof baseline.crouchShoulderY === 'number'
+      ? Math.max(
+          MOTION_CONFIG.squatShoulderDropThreshold * 0.65,
+          (baseline.crouchShoulderY - baseline.shoulderY) * 0.42,
+        )
+      : MOTION_CONFIG.squatShoulderDropThreshold;
   const hipDrop = metrics.hipY - baseline.hipY;
   const shoulderDrop = metrics.shoulderY - baseline.shoulderY;
   const torsoRatio =
@@ -163,10 +177,10 @@ export function isSquat(
     lowerBodyVisible &&
     metrics.averageKneeAngle < MOTION_CONFIG.squatAngleThreshold;
   const upperBodyDriven =
-    hipDrop > MOTION_CONFIG.squatHipDropThreshold &&
-    shoulderDrop > MOTION_CONFIG.squatShoulderDropThreshold;
+    hipDrop > personalizedHipThreshold &&
+    shoulderDrop > personalizedShoulderThreshold;
   const compressedTorso =
-    hipDrop > MOTION_CONFIG.squatHipDropThreshold * 0.75 &&
+    hipDrop > personalizedHipThreshold * 0.75 &&
     torsoRatio < MOTION_CONFIG.squatTorsoCompressionThreshold;
 
   return kneeDriven || upperBodyDriven || compressedTorso;

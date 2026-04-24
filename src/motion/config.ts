@@ -1,6 +1,8 @@
 export const MOTION_CONFIG = {
-  calibrationDurationMs: 3000,
-  calibrationMinSamples: 12,
+  calibrationNeutralDurationMs: 2000,
+  calibrationCrouchDurationMs: 1500,
+  calibrationStartHoldMs: 3000,
+  calibrationMinSamples: 10,
   detectionIntervalMs: 1000 / 18,
   minPoseConfidence: 0.42,
   guideLeftBoundary: 0.36,
@@ -22,6 +24,7 @@ export const MOTION_CONFIG = {
   jumpConfirmFrames: 2,
   cameraWidth: 640,
   cameraHeight: 480,
+  handRaiseShoulderMargin: 0.035,
 } as const;
 
 export const POSE_WASM_ROOT =

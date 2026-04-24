@@ -2,6 +2,7 @@ import { useGameStore } from '../stores/gameStore';
 
 export function MenuScreen() {
   const highScore = useGameStore((state) => state.highScore);
+  const startKeyboardRun = useGameStore((state) => state.startKeyboardRun);
   const startCalibration = useGameStore((state) => state.startCalibration);
 
   return (
@@ -16,40 +17,71 @@ export function MenuScreen() {
               Candy Run
             </h1>
             <p className="mt-5 max-w-2xl text-sm leading-6 text-white/72 sm:text-base">
-              Uc seritli seker tunel kosusu hazir. Klavye ile hemen
-              oynayabilirsin; istersen kalibrasyonla kamera kontrolunu da
-              acip lane, squat ve jump hareketlerini kullanabilirsin.
+              Uc seritli seker tunel kosusu hazir. Klavye ile aninda
+              baslayabilir ya da kamera modunda guided calibration ile
+              serit, squat ve jump hareketlerini esleyebilirsin.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={startKeyboardRun}
+                className="rounded-lg border border-cyan-300/30 bg-cyan-300 px-5 py-4 text-left text-slate-950 transition hover:bg-cyan-200"
+              >
+                <div className="text-xs font-bold uppercase tracking-[0.18em]">
+                  Klavye
+                </div>
+                <div className="mt-2 text-xl font-black leading-none">
+                  Hemen Basla
+                </div>
+                <div className="mt-2 text-sm text-slate-900/72">
+                  Kamera acmadan direkt geri sayima girer.
+                </div>
+              </button>
               <button
                 type="button"
                 onClick={startCalibration}
-                className="rounded-lg bg-cyan-300 px-5 py-3 text-sm font-bold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-cyan-200"
+                className="rounded-lg border border-white/15 bg-white/5 px-5 py-4 text-left text-white transition hover:bg-white/10"
               >
-                Baslat
+                <div className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-200">
+                  Kamera
+                </div>
+                <div className="mt-2 text-xl font-black leading-none">
+                  Guided Calibration
+                </div>
+                <div className="mt-2 text-sm text-white/72">
+                  Ortada dur, egil, sonra elini kaldirarak bilerek baslat.
+                </div>
               </button>
-              <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/72">
-                Enter ile baslat, Esc ile duraklat.
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3 text-sm text-white/72">
+              <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+                Enter = klavye ile basla
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+                C = kamera modu
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+                Esc = duraklat / geri don
               </div>
             </div>
           </div>
 
           <div className="rounded-lg border border-white/10 bg-black/28 p-6 shadow-hud backdrop-blur-md sm:p-8">
             <div className="text-xs uppercase tracking-[0.24em] text-white/45">
-              Kontroller
+              Modlar
             </div>
             <div className="mt-5 space-y-3 text-sm text-white/78">
               <div className="flex items-center justify-between gap-4">
-                <span>Serit</span>
-                <span className="font-semibold text-cyan-200">A / D</span>
+                <span>Klavye</span>
+                <span className="font-semibold text-cyan-200">Aninda baslar</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span>Egil</span>
-                <span className="font-semibold text-cyan-200">S</span>
+                <span>Kamera</span>
+                <span className="font-semibold text-cyan-200">3 adimli sync</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span>Zipla</span>
-                <span className="font-semibold text-cyan-200">W / Space</span>
+                <span>Onay</span>
+                <span className="font-semibold text-cyan-200">Eli kaldir</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span>Duraklat</span>

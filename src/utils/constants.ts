@@ -1,4 +1,4 @@
-import type { Baseline, Lane } from '../types';
+import type { Baseline, CalibrationUiState, Lane } from '../types';
 
 export const LANE_WIDTH = 2.8;
 
@@ -51,4 +51,11 @@ export const DEFAULT_BASELINE: Baseline = {
   hipY: 0.62,
   shoulderWidth: 0.18,
   torsoHeight: 0.2,
+};
+
+export const DEFAULT_CALIBRATION_UI: CalibrationUiState = {
+  step: 'CENTER',
+  progress: 0,
+  title: 'Ortada dik dur',
+  subtitle: 'Iki cizginin arasinda rahat durusunu alip sabit kal.',
 };

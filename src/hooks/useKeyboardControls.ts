@@ -18,8 +18,9 @@ export function useKeyboardControls() {
     function handleKeyDown(event: KeyboardEvent) {
       const {
         phase,
+        startKeyboardRun,
         startCalibration,
-        beginCountdown,
+        restartRun,
         changeLane,
         pauseRun,
         resumeRun,
@@ -50,17 +51,18 @@ export function useKeyboardControls() {
       }
 
       if (phase === 'MENU' && event.key === 'Enter') {
+        startKeyboardRun();
+        return;
+      }
+
+      if (phase === 'MENU' && key === 'c' && !event.repeat) {
+        event.preventDefault();
         startCalibration();
         return;
       }
 
       if (phase === 'GAME_OVER' && event.key === 'Enter') {
-        startCalibration();
-        return;
-      }
-
-      if (phase === 'CALIBRATION' && event.key === 'Enter') {
-        beginCountdown();
+        restartRun();
         return;
       }
 

@@ -6,6 +6,9 @@ export type GamePhase =
   | 'PAUSED'
   | 'GAME_OVER';
 
+export type ControlMode = 'KEYBOARD' | 'CAMERA';
+export type CalibrationStep = 'CENTER' | 'CROUCH' | 'READY';
+
 export type Lane = -1 | 0 | 1;
 
 export type Gesture = 'LEFT' | 'RIGHT' | 'SQUAT' | 'JUMP' | null;
@@ -24,6 +27,16 @@ export interface Baseline {
   hipY: number;
   shoulderWidth: number;
   torsoHeight: number;
+  crouchShoulderY?: number;
+  crouchHipY?: number;
+  crouchTorsoHeight?: number;
+}
+
+export interface CalibrationUiState {
+  step: CalibrationStep;
+  progress: number;
+  title: string;
+  subtitle: string;
 }
 
 export interface Obstacle {

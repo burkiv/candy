@@ -44,11 +44,13 @@ function PhaseFlow() {
 
 function Overlay() {
   const phase = useGameStore((state) => state.phase);
+  const controlMode = useGameStore((state) => state.controlMode);
+  const showCamera = controlMode === 'CAMERA' && phase !== 'MENU';
 
   return (
     <div className="absolute inset-0">
       {phase === 'PLAYING' || phase === 'PAUSED' ? <HUD /> : null}
-      {phase !== 'MENU' ? (
+      {showCamera ? (
         <div
           className={
             phase === 'CALIBRATION'

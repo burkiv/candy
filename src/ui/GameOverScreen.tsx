@@ -7,7 +7,8 @@ export function GameOverScreen() {
   const time = useGameStore((state) => state.time);
   const speed = useGameStore((state) => state.speed);
   const obstaclesAvoided = useGameStore((state) => state.obstaclesAvoided);
-  const startCalibration = useGameStore((state) => state.startCalibration);
+  const controlMode = useGameStore((state) => state.controlMode);
+  const restartRun = useGameStore((state) => state.restartRun);
   const returnToMenu = useGameStore((state) => state.returnToMenu);
 
   return (
@@ -51,10 +52,10 @@ export function GameOverScreen() {
         <div className="mt-8 flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={startCalibration}
+            onClick={restartRun}
             className="rounded-lg bg-cyan-300 px-5 py-3 text-sm font-bold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-cyan-200"
           >
-            Tekrar Oyna
+            {controlMode === 'CAMERA' ? 'Kamera Ile Tekrar' : 'Tekrar Oyna'}
           </button>
           <button
             type="button"

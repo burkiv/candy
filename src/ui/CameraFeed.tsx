@@ -20,7 +20,9 @@ export function CameraFeed({
 }: CameraFeedProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const phase = useGameStore((state) => state.phase);
   const cameraReady = useGameStore((state) => state.cameraReady);
+  const calibrationUi = useGameStore((state) => state.calibrationUi);
   const poseConfidence = useGameStore((state) => state.poseConfidence);
   const { error, statusLabel, guideZone } = usePoseDetection({
     videoRef,
@@ -45,11 +47,13 @@ export function CameraFeed({
         className="pointer-events-none absolute inset-0 h-full w-full scale-x-[-1]"
       />
       <div className={`absolute left-3 top-3 rounded bg-black/60 px-2 py-1 font-semibold uppercase tracking-[0.18em] text-cyan-200 ${fullscreen ? 'text-xs' : 'text-[10px]'}`}>
-        Kamera
+        Kamera Modu
       </div>
       <div className={`absolute inset-x-0 flex justify-center ${fullscreen ? 'top-4' : 'top-2'}`}>
         <div className={`rounded bg-black/55 px-3 py-1 text-white/75 ${fullscreen ? 'text-sm' : 'text-[10px]'}`}>
-          Sol / Orta / Sag serit senkronu
+          {phase === 'CALIBRATION'
+            ? calibrationUi.title
+            : 'Sol / Orta / Sag serit takibi'}
         </div>
       </div>
       <div

@@ -17,6 +17,8 @@ import {
   POSE_WASM_ROOT,
 } from '../motion/config';
 import { useGameStore } from '../stores/gameStore';
+import type { Baseline, CalibrationStep } from '../types';
+import { DEFAULT_CALIBRATION_UI } from '../utils/constants';
 
 type BodyZone = 'LEFT' | 'CENTER' | 'RIGHT' | 'NONE';
 type PoseModule = typeof import('@mediapipe/tasks-vision');
@@ -29,9 +31,13 @@ interface PoseDetectionState {
 }
 
 interface CalibrationState {
-  startedAt: number;
-  samples: ReturnType<typeof createBaselineSample>[];
-  done: boolean;
+  step: CalibrationStep;
+  neutralStartedAt: number;
+  neutralSamples: ReturnType<typeof createBaselineSample>[];
+  crouchStartedAt: number;
+  crouchSamples: ReturnType<typeof createBaselineSample>[];
+  handRaisedAt: number;
+  neutralBaseline: Baseline | null;
 }
 
 interface UsePoseDetectionArgs {
@@ -44,6 +50,18 @@ interface BodyMarker {
   shoulderY: number;
   hipY: number;
   zone: BodyZone;
+}
+
+function createCalibrationState(): CalibrationState {
+  return {
+    step: 'CENTER',
+    neutralStartedAt: 0,
+    neutralSamples: [],
+    crouchStartedAt: 0,
+    crouchSamples: [],
+    handRaisedAt: 0,
+    neutralBaseline: null,
+  };
 }
 
 function clamp01(value: number) {
@@ -70,10 +88,79 @@ function getBodyZone(centerX: number): BodyZone {
   return 'CENTER';
 }
 
+function isHandRaised(landmarks: NormalizedLandmark[]) {
+  const leftRaised =
+    landmarks[15].y < landmarks[11].y - MOTION_CONFIG.handRaiseShoulderMargin;
+  const rightRaised =
+    landmarks[16].y < landmarks[12].y - MOTION_CONFIG.handRaiseShoulderMargin;
+
+  return leftRaised || rightRaised;
+}
+
+function drawCalibrationGhost(
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  step: CalibrationStep,
+  handRaised: boolean,
+) {
+  const centerX = canvas.width / 2;
+  const crouched = step === 'CROUCH';
+  const headRadius = 26;
+  const headY = crouched ? canvas.height * 0.3 : canvas.height * 0.22;
+  const torsoTop = headY + 44;
+  const torsoHeight = crouched ? 92 : 136;
+  const torsoWidth = 76;
+  const hipY = torsoTop + torsoHeight;
+
+  context.save();
+  context.strokeStyle = 'rgba(255, 255, 255, 0.32)';
+  context.lineWidth = 3;
+  context.setLineDash([10, 8]);
+
+  context.beginPath();
+  context.arc(centerX, headY, headRadius, 0, Math.PI * 2);
+  context.stroke();
+
+  context.strokeRect(
+    centerX - torsoWidth / 2,
+    torsoTop,
+    torsoWidth,
+    torsoHeight,
+  );
+
+  context.beginPath();
+  context.moveTo(centerX - torsoWidth / 2, torsoTop + 28);
+  context.lineTo(centerX - torsoWidth / 2 - 34, torsoTop + (crouched ? 42 : 58));
+  context.moveTo(centerX + torsoWidth / 2, torsoTop + 28);
+  context.lineTo(
+    centerX + torsoWidth / 2 + 34,
+    torsoTop + (step === 'READY' ? -24 : crouched ? 42 : 58),
+  );
+  context.moveTo(centerX - 18, hipY);
+  context.lineTo(centerX - (crouched ? 48 : 28), hipY + (crouched ? 22 : 70));
+  context.moveTo(centerX + 18, hipY);
+  context.lineTo(centerX + (crouched ? 48 : 28), hipY + (crouched ? 22 : 70));
+  context.stroke();
+
+  if (step === 'READY') {
+    context.fillStyle = handRaised
+      ? 'rgba(34, 197, 94, 0.3)'
+      : 'rgba(250, 204, 21, 0.16)';
+    context.fillRect(centerX + torsoWidth / 2 + 14, torsoTop - 94, 44, 92);
+  }
+
+  context.restore();
+}
+
 function drawGuide(
   context: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   marker: BodyMarker | null,
+  options: {
+    calibrationStep: CalibrationStep;
+    showCalibrationGhost: boolean;
+    handRaised: boolean;
+  },
 ) {
   const leftBoundary = canvas.width * MOTION_CONFIG.guideLeftBoundary;
   const rightBoundary = canvas.width * MOTION_CONFIG.guideRightBoundary;
@@ -115,6 +202,15 @@ function drawGuide(
   context.moveTo(rightBoundary, 0);
   context.lineTo(rightBoundary, canvas.height);
   context.stroke();
+
+  if (options.showCalibrationGhost) {
+    drawCalibrationGhost(
+      context,
+      canvas,
+      options.calibrationStep,
+      options.handRaised,
+    );
+  }
 
   if (!marker) {
     return;
@@ -178,8 +274,8 @@ export function usePoseDetection({
   const beginCountdown = useGameStore((state) => state.beginCountdown);
   const setLane = useGameStore((state) => state.setLane);
   const setBaseline = useGameStore((state) => state.setBaseline);
+  const setCalibrationUi = useGameStore((state) => state.setCalibrationUi);
   const setCameraReady = useGameStore((state) => state.setCameraReady);
-  const setCountdown = useGameStore((state) => state.setCountdown);
   const setPoseConfidence = useGameStore((state) => state.setPoseConfidence);
   const setPoseSquatting = useGameStore((state) => state.setPoseSquatting);
   const triggerJump = useGameStore((state) => state.triggerJump);
@@ -189,7 +285,6 @@ export function usePoseDetection({
   const [guideZone, setGuideZone] = useState<BodyZone>('NONE');
 
   const phaseRef = useRef(phase);
-  const poseModuleRef = useRef<PoseModule | null>(null);
   const landmarkerRef = useRef<PoseLandmarkerType | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -207,26 +302,39 @@ export function usePoseDetection({
   });
   const squatFramesRef = useRef({ on: 0, off: 0 });
   const jumpFramesRef = useRef(0);
-  const calibrationRef = useRef<CalibrationState>({
-    startedAt: 0,
-    samples: [],
-    done: false,
-  });
+  const calibrationRef = useRef<CalibrationState>(createCalibrationState());
+
+  function setCalibrationCopy(
+    step: CalibrationStep,
+    progress: number,
+    title: string,
+    subtitle: string,
+    nextStatusLabel = title,
+  ) {
+    setCalibrationUi({
+      step,
+      progress: clamp01(progress),
+      title,
+      subtitle,
+    });
+    setStatusLabel(nextStatusLabel);
+  }
+
+  function resetCalibrationFlow(nextStatusLabel = DEFAULT_CALIBRATION_UI.title) {
+    calibrationRef.current = createCalibrationState();
+    setCalibrationUi(DEFAULT_CALIBRATION_UI);
+    setStatusLabel(nextStatusLabel);
+  }
 
   useEffect(() => {
     phaseRef.current = phase;
 
     if (phase === 'CALIBRATION') {
-      calibrationRef.current = {
-        startedAt: 0,
-        samples: [],
-        done: false,
-      };
+      resetCalibrationFlow();
       guideCenterXRef.current = 0.5;
       guideCenterLockedRef.current = false;
-      setCountdown(3);
       setGuideZone('NONE');
-      setStatusLabel('Ortada dur');
+      setError(null);
     }
 
     if (phase !== 'PLAYING') {
@@ -239,7 +347,7 @@ export function usePoseDetection({
       bodyMarkerRef.current = null;
       setPoseSquatting(false);
     }
-  }, [phase, setCountdown, setPoseSquatting]);
+  }, [phase, setCalibrationUi, setPoseSquatting]);
 
   useEffect(() => {
     let cancelled = false;
@@ -277,12 +385,11 @@ export function usePoseDetection({
         setCameraReady(true);
         setStatusLabel('Pose modeli yukleniyor');
 
-        const poseModule = await import('@mediapipe/tasks-vision');
+        const poseModule: PoseModule = await import('@mediapipe/tasks-vision');
         if (cancelled) {
           return;
         }
 
-        poseModuleRef.current = poseModule;
         const vision = await poseModule.FilesetResolver.forVisionTasks(
           POSE_WASM_ROOT,
         );
@@ -312,13 +419,15 @@ export function usePoseDetection({
 
         landmarkerRef.current = landmarker;
         setStatusLabel(
-          phaseRef.current === 'CALIBRATION' ? 'Ortada dur' : 'Takip hazir',
+          phaseRef.current === 'CALIBRATION'
+            ? DEFAULT_CALIBRATION_UI.title
+            : 'Takip hazir',
         );
       } catch (initializationError) {
         setCameraReady(false);
         setPoseConfidence(0);
         setError(getErrorMessage(initializationError));
-        setStatusLabel('Klavye fallback');
+        setStatusLabel('Klavye ile devam edebilirsin');
       }
     }
 
@@ -366,7 +475,11 @@ export function usePoseDetection({
 
         const context = canvas.getContext('2d');
         if (context) {
-          drawGuide(context, canvas, bodyMarkerRef.current);
+          drawGuide(context, canvas, bodyMarkerRef.current, {
+            calibrationStep: calibrationRef.current.step,
+            showCalibrationGhost: phaseRef.current === 'CALIBRATION',
+            handRaised: calibrationRef.current.handRaisedAt > 0,
+          });
 
           const landmarker = landmarkerRef.current;
           const now = performance.now();
@@ -396,17 +509,12 @@ export function usePoseDetection({
               }
 
               if (phaseRef.current === 'CALIBRATION') {
-                calibrationRef.current = {
-                  startedAt: 0,
-                  samples: [],
-                  done: false,
-                };
-                setCountdown(3);
+                resetCalibrationFlow('Kamerada daha net gorun');
               }
 
               setStatusLabel(
                 phaseRef.current === 'CALIBRATION'
-                  ? 'Kamerada gorun'
+                  ? 'Kamerada daha net gorun'
                   : 'Pose bekleniyor',
               );
             } else {
@@ -424,17 +532,12 @@ export function usePoseDetection({
                 }
 
                 if (phaseRef.current === 'CALIBRATION') {
-                  calibrationRef.current = {
-                    startedAt: 0,
-                    samples: [],
-                    done: false,
-                  };
-                  setCountdown(3);
+                  resetCalibrationFlow('Biraz daha aydinlik dene');
                 }
 
                 setStatusLabel(
                   phaseRef.current === 'CALIBRATION'
-                    ? 'Biraz daha aydinlik'
+                    ? 'Biraz daha aydinlik dene'
                     : 'Goruntu zayif',
                 );
               } else {
@@ -467,45 +570,188 @@ export function usePoseDetection({
                 setGuideZone(zone);
 
                 if (phaseRef.current === 'CALIBRATION') {
-                  if (zone !== 'CENTER') {
-                    calibrationRef.current = {
-                      startedAt: 0,
-                      samples: [],
-                      done: false,
-                    };
-                    setCountdown(3);
-                    setStatusLabel('Ortadaki alana gec');
-                  } else {
-                    const calibration = calibrationRef.current;
+                  const calibration = calibrationRef.current;
 
-                    if (calibration.startedAt === 0) {
-                      calibration.startedAt = now;
-                    }
-
-                    calibration.samples.push(createBaselineSample(landmarks));
-                    const elapsed = now - calibration.startedAt;
-                    const remainingSeconds = Math.max(
-                      1,
-                      Math.ceil(
-                        (MOTION_CONFIG.calibrationDurationMs - elapsed) / 1000,
-                      ),
-                    );
-                    setCountdown(remainingSeconds);
-
-                    if (
-                      !calibration.done &&
-                      elapsed >= MOTION_CONFIG.calibrationDurationMs &&
-                      calibration.samples.length >=
-                        MOTION_CONFIG.calibrationMinSamples
-                    ) {
-                      calibration.done = true;
-                      const baseline = averageBaseline(calibration.samples);
-                      guideCenterXRef.current = baseline.centerX;
-                      setBaseline(baseline);
-                      setStatusLabel('Senkron tamam');
-                      beginCountdown();
+                  if (calibration.step === 'CENTER') {
+                    if (zone !== 'CENTER') {
+                      calibration.neutralStartedAt = 0;
+                      calibration.neutralSamples = [];
+                      setCalibrationCopy(
+                        'CENTER',
+                        0,
+                        'Ortada dik dur',
+                        'Iki cizginin arasina gecip rahat durusunu sabitle.',
+                        'Ortadaki bolgeye gec',
+                      );
                     } else {
-                      setStatusLabel('Ortada sabit kal');
+                      if (calibration.neutralStartedAt === 0) {
+                        calibration.neutralStartedAt = now;
+                      }
+
+                      calibration.neutralSamples.push(createBaselineSample(landmarks));
+                      const elapsed = now - calibration.neutralStartedAt;
+                      const progress =
+                        elapsed / MOTION_CONFIG.calibrationNeutralDurationMs;
+
+                      setCalibrationCopy(
+                        'CENTER',
+                        progress,
+                        'Ortada dik dur',
+                        'Iki cizginin arasinda rahat durusunu alip sabit kal.',
+                        'Dogal durusunu aliyoruz',
+                      );
+
+                      if (
+                        elapsed >= MOTION_CONFIG.calibrationNeutralDurationMs &&
+                        calibration.neutralSamples.length >=
+                          MOTION_CONFIG.calibrationMinSamples
+                      ) {
+                        const neutralBaseline = averageBaseline(
+                          calibration.neutralSamples,
+                        );
+                        calibration.step = 'CROUCH';
+                        calibration.neutralBaseline = neutralBaseline;
+                        calibration.crouchStartedAt = 0;
+                        calibration.crouchSamples = [];
+                        guideCenterXRef.current = neutralBaseline.centerX;
+
+                        setCalibrationCopy(
+                          'CROUCH',
+                          0,
+                          'Simdi egil',
+                          'Ortada kal ve hafif squat pozunda bir an sabit dur.',
+                          'Biraz egil ve bekle',
+                        );
+                      }
+                    }
+                  } else if (calibration.step === 'CROUCH') {
+                    const neutralBaseline =
+                      calibration.neutralBaseline ??
+                      averageBaseline(calibration.neutralSamples);
+
+                    if (zone !== 'CENTER') {
+                      calibration.crouchStartedAt = 0;
+                      calibration.crouchSamples = [];
+                      setCalibrationCopy(
+                        'CROUCH',
+                        0,
+                        'Simdi egil',
+                        'Ortaya donup squat pozunu orada sabitle.',
+                        'Ortaya don ve egil',
+                      );
+                    } else {
+                      const squatCandidate = isSquat(metrics, neutralBaseline);
+
+                      if (!squatCandidate) {
+                        calibration.crouchStartedAt = 0;
+                        calibration.crouchSamples = [];
+                        setCalibrationCopy(
+                          'CROUCH',
+                          0,
+                          'Simdi egil',
+                          'Omuz ve kalcan biraz daha asagi gelsin; squat pozunda kal.',
+                          'Biraz daha egil',
+                        );
+                      } else {
+                        if (calibration.crouchStartedAt === 0) {
+                          calibration.crouchStartedAt = now;
+                        }
+
+                        calibration.crouchSamples.push(createBaselineSample(landmarks));
+                        const elapsed = now - calibration.crouchStartedAt;
+                        const progress =
+                          elapsed / MOTION_CONFIG.calibrationCrouchDurationMs;
+
+                        setCalibrationCopy(
+                          'CROUCH',
+                          progress,
+                          'Simdi egil',
+                          'Harika. Aynen boyle bir an daha kal.',
+                          'Squat pozunu tut',
+                        );
+
+                        if (
+                          elapsed >= MOTION_CONFIG.calibrationCrouchDurationMs &&
+                          calibration.crouchSamples.length >=
+                            MOTION_CONFIG.calibrationMinSamples
+                        ) {
+                          const crouchBaseline = averageBaseline(
+                            calibration.crouchSamples,
+                          );
+                          const personalizedBaseline: Baseline = {
+                            ...neutralBaseline,
+                            crouchShoulderY: crouchBaseline.shoulderY,
+                            crouchHipY: crouchBaseline.hipY,
+                            crouchTorsoHeight: crouchBaseline.torsoHeight,
+                          };
+
+                          calibration.step = 'READY';
+                          calibration.handRaisedAt = 0;
+                          calibration.neutralBaseline = personalizedBaseline;
+                          setBaseline(personalizedBaseline);
+
+                          setCalibrationCopy(
+                            'READY',
+                            0,
+                            'Hazir oldugunda elini kaldir',
+                            'Dik dur. Tek elini 3 saniye yukarida tutunca oyun baslayacak.',
+                            'Dik dur ve elini kaldir',
+                          );
+                        }
+                      }
+                    }
+                  } else {
+                    const personalizedBaseline = calibration.neutralBaseline;
+                    const handRaised = isHandRaised(landmarks);
+                    const uprightEnough =
+                      personalizedBaseline != null &&
+                      !isSquat(metrics, personalizedBaseline);
+
+                    if (zone !== 'CENTER' || !uprightEnough) {
+                      calibration.handRaisedAt = 0;
+                      setCalibrationCopy(
+                        'READY',
+                        0,
+                        'Hazir oldugunda elini kaldir',
+                        'Dik durup ortaya yerles. Sonra tek elini yukari kaldir.',
+                        zone !== 'CENTER' ? 'Ortaya yerles' : 'Once dik dur',
+                      );
+                    } else if (!handRaised) {
+                      calibration.handRaisedAt = 0;
+                      setCalibrationCopy(
+                        'READY',
+                        0,
+                        'Hazir oldugunda elini kaldir',
+                        'Tek elini yukari kaldir ve 3 saniye boyunca indirme.',
+                        'Hazirsa elini yukari kaldir',
+                      );
+                    } else {
+                      if (calibration.handRaisedAt === 0) {
+                        calibration.handRaisedAt = now;
+                      }
+
+                      const elapsed = now - calibration.handRaisedAt;
+                      const progress =
+                        elapsed / MOTION_CONFIG.calibrationStartHoldMs;
+
+                      setCalibrationCopy(
+                        'READY',
+                        progress,
+                        'Hazir oldugunda elini kaldir',
+                        'Mukemmel. Elini 3 saniye yukarida tut ve baslayalim.',
+                        'Elini yukarida tut',
+                      );
+
+                      if (elapsed >= MOTION_CONFIG.calibrationStartHoldMs) {
+                        setCalibrationCopy(
+                          'READY',
+                          1,
+                          'Basliyoruz',
+                          'Kalibrasyon tamamlandi. Geri sayim basladi.',
+                          'Basliyoruz',
+                        );
+                        beginCountdown();
+                      }
                     }
                   }
                 } else if (phaseRef.current === 'PLAYING') {
@@ -560,8 +806,7 @@ export function usePoseDetection({
                   if (
                     !squatCandidate &&
                     jumpFramesRef.current >= MOTION_CONFIG.jumpConfirmFrames &&
-                    now - lastJumpAtRef.current >=
-                      MOTION_CONFIG.jumpCooldownMs
+                    now - lastJumpAtRef.current >= MOTION_CONFIG.jumpCooldownMs
                   ) {
                     lastJumpAtRef.current = now;
                     jumpFramesRef.current = 0;
@@ -589,7 +834,11 @@ export function usePoseDetection({
               }
             }
 
-            drawGuide(context, canvas, bodyMarkerRef.current);
+            drawGuide(context, canvas, bodyMarkerRef.current, {
+              calibrationStep: calibrationRef.current.step,
+              showCalibrationGhost: phaseRef.current === 'CALIBRATION',
+              handRaised: calibrationRef.current.handRaisedAt > 0,
+            });
             result.close();
           }
         }
@@ -610,7 +859,7 @@ export function usePoseDetection({
     beginCountdown,
     canvasRef,
     setBaseline,
-    setCountdown,
+    setCalibrationUi,
     setLane,
     setPoseConfidence,
     setPoseSquatting,

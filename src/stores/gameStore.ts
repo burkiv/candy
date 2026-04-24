@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import type {
   Baseline,
+  CalibrationUiState,
   Collectible,
   CollectibleType,
+  ControlMode,
   GamePhase,
   Gesture,
   Lane,
@@ -18,6 +20,7 @@ import {
   COLLISION_BUFFER_BACK,
   COLLISION_BUFFER_FRONT,
   CROUCH_HEIGHT,
+  DEFAULT_CALIBRATION_UI,
   DEFAULT_BASELINE,
   DESPAWN_Z,
   DISTANCE_SCALE,
@@ -49,6 +52,7 @@ type Direction = 'LEFT' | 'RIGHT';
 
 interface GameState {
   phase: GamePhase;
+  controlMode: ControlMode | null;
   countdown: number;
   score: number;
   highScore: number;
@@ -77,10 +81,13 @@ interface GameState {
   renderMeshes: number;
   renderTriangles: number;
   renderGeometries: number;
+  calibrationUi: CalibrationUiState;
   baseline: Baseline | null;
   poseConfidence: number;
   cameraReady: boolean;
+  startKeyboardRun: () => void;
   startCalibration: () => void;
+  restartRun: () => void;
   beginCountdown: () => void;
   startRun: () => void;
   pauseRun: () => void;
@@ -102,6 +109,7 @@ interface GameState {
     triangles: number;
     geometries: number;
   }) => void;
+  setCalibrationUi: (ui: CalibrationUiState) => void;
   setBaseline: (baseline: Baseline) => void;
   setPoseConfidence: (confidence: number) => void;
   setCameraReady: (ready: boolean) => void;
@@ -196,8 +204,58 @@ function playerClearsObstacle(obstacle: Obstacle, state: Pick<GameState, 'isSqua
   }
 }
 
+function createRunReset(
+  state: Pick<
+    GameState,
+    | 'baseline'
+    | 'controlMode'
+    | 'highScore'
+    | 'renderMeshes'
+    | 'renderTriangles'
+    | 'renderGeometries'
+  >,
+  phase: GamePhase,
+  controlMode: ControlMode | null,
+) {
+  return {
+    phase,
+    controlMode,
+    countdown: 3,
+    score: 0,
+    time: 0,
+    distance: 0,
+    speed: START_RUN_SPEED,
+    collisionCount: 0,
+    impactTimeLeft: 0,
+    hitCooldownTimeLeft: 0,
+    livesRemaining: START_LIVES,
+    currentLane: 0 as Lane,
+    playerY: EYE_HEIGHT,
+    isSquatting: false,
+    manualSquatting: false,
+    poseSquatting: false,
+    isJumping: false,
+    jumpElapsed: 0,
+    gesture: null as Gesture,
+    gestureTimeLeft: 0,
+    obstacles: [] as Obstacle[],
+    collectibles: [] as Collectible[],
+    obstaclesAvoided: 0,
+    coinsCollected: 0,
+    starsCollected: 0,
+    renderMeshes: state.renderMeshes,
+    renderTriangles: state.renderTriangles,
+    renderGeometries: state.renderGeometries,
+    calibrationUi: DEFAULT_CALIBRATION_UI,
+    baseline: state.baseline ?? DEFAULT_BASELINE,
+    poseConfidence: 0,
+    cameraReady: false,
+  };
+}
+
 export const useGameStore = create<GameState>((set) => ({
   phase: 'MENU',
+  controlMode: null,
   countdown: 3,
   score: 0,
   highScore: readHighScore(),
@@ -226,41 +284,33 @@ export const useGameStore = create<GameState>((set) => ({
   renderMeshes: 0,
   renderTriangles: 0,
   renderGeometries: 0,
+  calibrationUi: DEFAULT_CALIBRATION_UI,
   baseline: DEFAULT_BASELINE,
   poseConfidence: 0,
   cameraReady: false,
+  startKeyboardRun: () =>
+    set((state) => ({
+      ...createRunReset(state, 'COUNTDOWN', 'KEYBOARD'),
+      highScore: state.highScore,
+    })),
   startCalibration: () =>
     set((state) => ({
-      phase: 'CALIBRATION',
-      countdown: 3,
-      score: 0,
-      time: 0,
-      distance: 0,
-      speed: START_RUN_SPEED,
-      collisionCount: 0,
-      impactTimeLeft: 0,
-      hitCooldownTimeLeft: 0,
-      livesRemaining: START_LIVES,
-      currentLane: 0,
-      playerY: EYE_HEIGHT,
-      isSquatting: false,
-      manualSquatting: false,
-      poseSquatting: false,
-      isJumping: false,
-      jumpElapsed: 0,
-      gesture: null,
-      gestureTimeLeft: 0,
-      obstacles: [],
-      collectibles: [],
-      obstaclesAvoided: 0,
-      coinsCollected: 0,
-      starsCollected: 0,
-      renderMeshes: state.renderMeshes,
-      renderTriangles: state.renderTriangles,
-      renderGeometries: state.renderGeometries,
-      baseline: state.baseline ?? DEFAULT_BASELINE,
-      poseConfidence: 0,
+      ...createRunReset(state, 'CALIBRATION', 'CAMERA'),
+      highScore: state.highScore,
     })),
+  restartRun: () =>
+    set((state) => {
+      const controlMode = state.controlMode ?? 'KEYBOARD';
+
+      return {
+        ...createRunReset(
+          state,
+          controlMode === 'CAMERA' ? 'CALIBRATION' : 'COUNTDOWN',
+          controlMode,
+        ),
+        highScore: state.highScore,
+      };
+    }),
   beginCountdown: () =>
     set({
       phase: 'COUNTDOWN',
@@ -318,33 +368,7 @@ export const useGameStore = create<GameState>((set) => ({
     ),
   returnToMenu: () =>
     set((state) => ({
-      phase: 'MENU',
-      countdown: 3,
-      score: 0,
-      time: 0,
-      distance: 0,
-      speed: START_RUN_SPEED,
-      collisionCount: 0,
-      impactTimeLeft: 0,
-      hitCooldownTimeLeft: 0,
-      livesRemaining: START_LIVES,
-      currentLane: 0,
-      playerY: EYE_HEIGHT,
-      isSquatting: false,
-      manualSquatting: false,
-      poseSquatting: false,
-      isJumping: false,
-      jumpElapsed: 0,
-      gesture: null,
-      gestureTimeLeft: 0,
-      obstacles: [],
-      collectibles: [],
-      obstaclesAvoided: 0,
-      coinsCollected: 0,
-      starsCollected: 0,
-      renderMeshes: state.renderMeshes,
-      renderTriangles: state.renderTriangles,
-      renderGeometries: state.renderGeometries,
+      ...createRunReset(state, 'MENU', state.controlMode),
       highScore: state.highScore,
     })),
   setCountdown: (value) => set({ countdown: value }),
@@ -668,6 +692,15 @@ export const useGameStore = create<GameState>((set) => ({
             renderTriangles: triangles,
             renderGeometries: geometries,
           },
+    ),
+  setCalibrationUi: (calibrationUi) =>
+    set((state) =>
+      state.calibrationUi.step === calibrationUi.step &&
+      state.calibrationUi.progress === calibrationUi.progress &&
+      state.calibrationUi.title === calibrationUi.title &&
+      state.calibrationUi.subtitle === calibrationUi.subtitle
+        ? state
+        : { calibrationUi },
     ),
   setBaseline: (baseline) => set({ baseline }),
   setPoseConfidence: (confidence) =>
