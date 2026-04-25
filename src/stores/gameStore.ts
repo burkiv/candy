@@ -39,16 +39,15 @@ import {
   HIT_SCORE_PENALTY,
   JUMP_ARC_HEIGHT,
   JUMP_DURATION,
-  MAX_RUN_SPEED,
   PASS_Z,
   PLAYER_Z,
   SCORE_RATE,
-  SPEED_STEP_AMOUNT,
-  SPEED_STEP_DISTANCE,
   SPAWN_Z,
   START_LIVES,
   STAR_SCORE_BONUS,
   START_RUN_SPEED,
+  getRunSpeed,
+  getSpawnSettings,
 } from '../utils/constants';
 import {
   clampLane,
@@ -270,6 +269,23 @@ function createObstacle(distance: number): Obstacle {
   };
 }
 
+function createConfiguredObstacle(
+  type: ObstacleType,
+  lanes: Lane[],
+  z = SPAWN_Z,
+): Obstacle {
+  return {
+    id: nextObstacleId(),
+    type,
+    lanes,
+    z,
+    passed: false,
+    collisionReported: false,
+    clearanceBuffered: false,
+    laneBypassed: false,
+  };
+}
+
 function createCollectible(distance: number): Collectible {
   const lane = randomItem([-1, 0, 1] as Lane[]);
   const starChance = distance < 180 ? 0.15 : distance < 420 ? 0.2 : 0.26;
@@ -314,23 +330,45 @@ function createLaneRewardTrail(
   );
 }
 
-function createObstacleBundle(distance: number) {
+function createObstacleBundle(distance: number, controlMode: ControlMode | null) {
   const obstacle = createObstacle(distance);
+  const obstacles: Obstacle[] = [obstacle];
   const rewardStartZ = SPAWN_Z - 8;
   const starChance = distance < 180 ? 0.12 : distance < 420 ? 0.18 : 0.24;
   const bonusType: CollectibleType = Math.random() < starChance ? 'STAR' : 'COIN';
   const allLanes: Lane[] = [-1, 0, 1];
   let collectibles: Collectible[] = [];
+  const trainBlockedLanes = new Set<Lane>();
+
+  const spawnSettings = getSpawnSettings(controlMode, distance);
+  const canSpawnBarrierCombo =
+    (obstacle.type === 'BARRIER_TOP' || obstacle.type === 'BARRIER_LOW') &&
+    distance >= 220 &&
+    Math.random() < spawnSettings.comboChance;
+
+  if (canSpawnBarrierCombo) {
+    const blockedLane = randomItem(allLanes);
+    obstacles.push(createConfiguredObstacle('TRAIN_SINGLE', [blockedLane]));
+    trainBlockedLanes.add(blockedLane);
+  }
 
   switch (obstacle.type) {
     case 'BARRIER_TOP':
     case 'BARRIER_LOW':
-      collectibles = allLanes.map((lane) =>
-        createPatternCollectible(lane, rewardStartZ, 'COIN'),
-      );
+      collectibles = allLanes
+        .filter((lane) => !trainBlockedLanes.has(lane))
+        .map((lane) => createPatternCollectible(lane, rewardStartZ, 'COIN'));
+
+      if (collectibles.length === 0) {
+        collectibles = [createPatternCollectible(0, rewardStartZ, 'COIN')];
+      }
 
       if (bonusType === 'STAR') {
-        collectibles.push(createPatternCollectible(0, rewardStartZ - 5.2, 'STAR'));
+        const bonusLane =
+          collectibles.find((collectible) => collectible.lane === 0)?.lane ??
+          collectibles[0]?.lane ??
+          0;
+        collectibles.push(createPatternCollectible(bonusLane, rewardStartZ - 5.2, 'STAR'));
       }
       break;
     case 'TRAIN_SINGLE': {
@@ -362,7 +400,7 @@ function createObstacleBundle(distance: number) {
   }
 
   return {
-    obstacle,
+    obstacles,
     collectibles,
   };
 }
@@ -722,11 +760,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       const nextTime = state.time + delta;
       const nextDistance =
         state.distance + BASE_WORLD_SPEED * state.speed * delta * DISTANCE_SCALE;
-      const nextSpeed = Math.min(
-        MAX_RUN_SPEED,
-        START_RUN_SPEED +
-          Math.floor(nextDistance / SPEED_STEP_DISTANCE) * SPEED_STEP_AMOUNT,
-      );
+      const nextSpeed = getRunSpeed(state.controlMode, nextDistance);
 
       let nextJumpElapsed = state.jumpElapsed;
       let nextIsJumping = state.isJumping;
@@ -922,10 +956,10 @@ export const useGameStore = create<GameState>((set, get) => ({
         return state;
       }
 
-      const bundle = createObstacleBundle(state.distance);
+      const bundle = createObstacleBundle(state.distance, state.controlMode);
 
       return {
-        obstacles: [...state.obstacles, bundle.obstacle],
+        obstacles: [...state.obstacles, ...bundle.obstacles],
         collectibles: [...state.collectibles, ...bundle.collectibles],
       };
     }),

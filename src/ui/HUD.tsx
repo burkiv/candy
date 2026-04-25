@@ -1,5 +1,5 @@
 import { useGameStore } from '../stores/gameStore';
-import { SPEED_STEP_DISTANCE } from '../utils/constants';
+import { getSpeedStepDistance } from '../utils/constants';
 import { formatTime } from '../utils/math';
 
 function formatStat(value: number) {
@@ -52,6 +52,7 @@ export function HUD() {
   const time = useGameStore((state) => state.time);
   const distance = useGameStore((state) => state.distance);
   const speed = useGameStore((state) => state.speed);
+  const controlMode = useGameStore((state) => state.controlMode);
   const invincibleMode = useGameStore((state) => state.invincibleMode);
   const collisionCount = useGameStore((state) => state.collisionCount);
   const impactTimeLeft = useGameStore((state) => state.impactTimeLeft);
@@ -66,8 +67,9 @@ export function HUD() {
     distance >= 1000
       ? `${(distance / 1000).toFixed(2)} km`
       : `${Math.floor(distance)} m`;
+  const speedStepDistance = getSpeedStepDistance(controlMode);
   const remainingToNextSpeed =
-    SPEED_STEP_DISTANCE - (distance % SPEED_STEP_DISTANCE || 0);
+    speedStepDistance - (distance % speedStepDistance || 0);
 
   return (
     <>

@@ -1,4 +1,4 @@
-import type { Baseline, CalibrationUiState, Lane } from '../types';
+import type { Baseline, CalibrationUiState, ControlMode, Lane } from '../types';
 
 export const LANE_WIDTH = 2.8;
 
@@ -20,9 +20,6 @@ export const HIT_INVULNERABILITY_DURATION = 1.2;
 export const BASE_WORLD_SPEED = 22;
 export const PREVIEW_WORLD_SPEED = 8;
 export const START_RUN_SPEED = 0.72;
-export const MAX_RUN_SPEED = 1.42;
-export const SPEED_STEP_DISTANCE = 150;
-export const SPEED_STEP_AMOUNT = 0.07;
 export const DISTANCE_SCALE = 0.42;
 export const SPAWN_Z = -92;
 export const PASS_Z = 8;
@@ -57,5 +54,73 @@ export const DEFAULT_CALIBRATION_UI: CalibrationUiState = {
   step: 'CENTER',
   progress: 0,
   title: 'Ortada dik dur',
-  subtitle: 'İki çizginin arasında rahat duruşunu alıp sabit kal.',
+  subtitle: 'Iki cizginin arasinda rahat durusunu alip sabit kal.',
 };
+
+type DifficultyBand = {
+  distance: number;
+  spawnInterval: number;
+  spawnVariance: number;
+  comboChance: number;
+};
+
+type RunDifficultyProfile = {
+  maxRunSpeed: number;
+  speedStepDistance: number;
+  speedStepAmount: number;
+  bands: DifficultyBand[];
+};
+
+const RUN_DIFFICULTY_PROFILES: Record<ControlMode, RunDifficultyProfile> = {
+  KEYBOARD: {
+    maxRunSpeed: 1.82,
+    speedStepDistance: 120,
+    speedStepAmount: 0.085,
+    bands: [
+      { distance: 0, spawnInterval: 2.08, spawnVariance: 0.34, comboChance: 0 },
+      { distance: 160, spawnInterval: 1.82, spawnVariance: 0.3, comboChance: 0.1 },
+      { distance: 340, spawnInterval: 1.56, spawnVariance: 0.24, comboChance: 0.18 },
+      { distance: 620, spawnInterval: 1.34, spawnVariance: 0.2, comboChance: 0.28 },
+      { distance: 980, spawnInterval: 1.18, spawnVariance: 0.16, comboChance: 0.36 },
+    ],
+  },
+  CAMERA: {
+    maxRunSpeed: 1.56,
+    speedStepDistance: 145,
+    speedStepAmount: 0.06,
+    bands: [
+      { distance: 0, spawnInterval: 2.14, spawnVariance: 0.36, comboChance: 0 },
+      { distance: 200, spawnInterval: 1.92, spawnVariance: 0.32, comboChance: 0.06 },
+      { distance: 420, spawnInterval: 1.7, spawnVariance: 0.28, comboChance: 0.12 },
+      { distance: 760, spawnInterval: 1.54, spawnVariance: 0.22, comboChance: 0.18 },
+      { distance: 1120, spawnInterval: 1.42, spawnVariance: 0.18, comboChance: 0.24 },
+    ],
+  },
+};
+
+function getRunDifficultyProfile(controlMode: ControlMode | null) {
+  return RUN_DIFFICULTY_PROFILES[controlMode === 'CAMERA' ? 'CAMERA' : 'KEYBOARD'];
+}
+
+export function getRunSpeed(controlMode: ControlMode | null, distance: number) {
+  const profile = getRunDifficultyProfile(controlMode);
+
+  return Math.min(
+    profile.maxRunSpeed,
+    START_RUN_SPEED +
+      Math.floor(distance / profile.speedStepDistance) * profile.speedStepAmount,
+  );
+}
+
+export function getSpeedStepDistance(controlMode: ControlMode | null) {
+  return getRunDifficultyProfile(controlMode).speedStepDistance;
+}
+
+export function getSpawnSettings(controlMode: ControlMode | null, distance: number) {
+  const profile = getRunDifficultyProfile(controlMode);
+
+  return profile.bands.reduce(
+    (selected, band) => (distance >= band.distance ? band : selected),
+    profile.bands[0],
+  );
+}
