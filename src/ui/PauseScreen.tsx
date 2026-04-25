@@ -1,4 +1,5 @@
 import { useGameStore } from '../stores/gameStore';
+import { AudioSettingsDialog } from './AudioSettingsDialog';
 
 export function PauseScreen() {
   const score = useGameStore((state) => state.score);
@@ -10,7 +11,7 @@ export function PauseScreen() {
     <div className="absolute inset-0 flex items-center justify-center px-4">
       <div className="w-full max-w-2xl rounded-lg border border-white/10 bg-black/50 p-6 shadow-hud backdrop-blur-md sm:p-8">
         <div className="text-sm uppercase tracking-[0.24em] text-cyan-200/80">
-          Duraklatıldı
+          Duraklatildi
         </div>
         <div className="mt-3 text-5xl font-black leading-none sm:text-6xl">
           Candy Run beklemede
@@ -37,7 +38,7 @@ export function PauseScreen() {
           </div>
         </div>
         <div className="mt-6 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/72">
-          Esc ile devam et, istersen aşağıdan menüye dön.
+          Esc ile devam et, istersen asagidan menuye don.
         </div>
         <div className="mt-8 flex flex-wrap gap-3">
           <button
@@ -47,12 +48,17 @@ export function PauseScreen() {
           >
             Devam Et
           </button>
+          <AudioSettingsDialog
+            buttonLabel="Ayarlar"
+            subtitle="Duraklatma ekranindan cikmadan ses seviyelerini aninda duzenleyebilirsin."
+            buttonClassName="rounded-lg border border-white/15 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-[0.18em] text-white transition hover:bg-white/10"
+          />
           <button
             type="button"
             onClick={returnToMenu}
             className="rounded-lg border border-white/15 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-[0.18em] text-white transition hover:bg-white/10"
           >
-            Ana Menü
+            Ana Menu
           </button>
         </div>
       </div>

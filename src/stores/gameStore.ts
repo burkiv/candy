@@ -12,6 +12,7 @@ import type {
   LeaderboardStatus,
   Obstacle,
   ObstacleType,
+  WorldId,
 } from '../types';
 import {
   fetchLeaderboardEntries,
@@ -58,9 +59,17 @@ import {
 
 type Direction = 'LEFT' | 'RIGHT';
 
+interface AudioSettingsState {
+  musicVolume: number;
+  ambienceVolume: number;
+  effectsVolume: number;
+}
+
 interface GameState {
   phase: GamePhase;
   controlMode: ControlMode | null;
+  selectedWorld: WorldId;
+  audioSettings: AudioSettingsState;
   playerName: string;
   leaderboard: LeaderboardEntry[];
   leaderboardStatus: LeaderboardStatus;
@@ -99,6 +108,11 @@ interface GameState {
   startKeyboardRun: () => void;
   startCalibration: () => void;
   restartRun: () => void;
+  setSelectedWorld: (world: WorldId) => void;
+  setAudioSetting: <K extends keyof AudioSettingsState>(
+    key: K,
+    value: AudioSettingsState[K],
+  ) => void;
   setPlayerName: (name: string) => void;
   loadLeaderboard: () => Promise<void>;
   submitLeaderboardScore: () => Promise<void>;
@@ -144,6 +158,77 @@ function saveHighScore(score: number) {
   if (typeof window !== 'undefined') {
     window.localStorage.setItem('candy-run-high-score', String(score));
   }
+}
+
+function readSelectedWorld(): WorldId {
+  if (typeof window === 'undefined') {
+    return 'CANDY';
+  }
+
+  const raw = window.localStorage.getItem('candy-run-selected-world');
+  return raw === 'OCEAN' ? 'OCEAN' : 'CANDY';
+}
+
+function writeSelectedWorld(world: WorldId) {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem('candy-run-selected-world', world);
+  }
+
+  return world;
+}
+
+function normalizeVolume(value: number) {
+  return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 1));
+}
+
+function readAudioSettings(): AudioSettingsState {
+  if (typeof window === 'undefined') {
+    return {
+      musicVolume: 1,
+      ambienceVolume: 1,
+      effectsVolume: 1,
+    };
+  }
+
+  const raw = window.localStorage.getItem('candy-run-audio-settings');
+
+  if (!raw) {
+    return {
+      musicVolume: 1,
+      ambienceVolume: 1,
+      effectsVolume: 1,
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<AudioSettingsState>;
+
+    return {
+      musicVolume: normalizeVolume(parsed.musicVolume ?? 1),
+      ambienceVolume: normalizeVolume(parsed.ambienceVolume ?? 1),
+      effectsVolume: normalizeVolume(parsed.effectsVolume ?? 1),
+    };
+  } catch {
+    return {
+      musicVolume: 1,
+      ambienceVolume: 1,
+      effectsVolume: 1,
+    };
+  }
+}
+
+function writeAudioSettings(settings: AudioSettingsState) {
+  const normalized = {
+    musicVolume: normalizeVolume(settings.musicVolume),
+    ambienceVolume: normalizeVolume(settings.ambienceVolume),
+    effectsVolume: normalizeVolume(settings.effectsVolume),
+  };
+
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem('candy-run-audio-settings', JSON.stringify(normalized));
+  }
+
+  return normalized;
 }
 
 function createObstacle(distance: number): Obstacle {
@@ -346,6 +431,8 @@ function createRunReset(
 export const useGameStore = create<GameState>((set, get) => ({
   phase: 'MENU',
   controlMode: null,
+  selectedWorld: readSelectedWorld(),
+  audioSettings: readAudioSettings(),
   playerName: readStoredPlayerName(),
   leaderboard: [],
   leaderboardStatus: 'idle',
@@ -403,6 +490,29 @@ export const useGameStore = create<GameState>((set, get) => ({
         ),
         highScore: state.highScore,
       };
+    }),
+  setSelectedWorld: (world) =>
+    set((state) =>
+      state.selectedWorld === world
+        ? state
+        : {
+            selectedWorld: writeSelectedWorld(world),
+          },
+    ),
+  setAudioSetting: (key, value) =>
+    set((state) => {
+      const normalizedValue = normalizeVolume(value);
+
+      if (state.audioSettings[key] === normalizedValue) {
+        return state;
+      }
+
+      const audioSettings = writeAudioSettings({
+        ...state.audioSettings,
+        [key]: normalizedValue,
+      });
+
+      return { audioSettings };
     }),
   setPlayerName: (name) =>
     set({

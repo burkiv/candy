@@ -1,5 +1,6 @@
-import { Canvas } from '@react-three/fiber';
-import { Suspense } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
+import { Suspense, useEffect } from 'react';
+import { useWorldDefinition } from '../worlds';
 import { Collectibles } from './Collectibles';
 import { GameLoop } from './GameLoop';
 import { Lighting } from './Lighting';
@@ -9,19 +10,19 @@ import { Rails } from './Rails';
 import { RenderStatsProbe } from './RenderStatsProbe';
 import { Tunnel } from './Tunnel';
 
-export function Scene() {
+function SceneContent() {
+  const world = useWorldDefinition();
+  const { gl } = useThree();
+
+  useEffect(() => {
+    gl.toneMappingExposure = world.scene.exposure ?? 1.15;
+  }, [gl, world.scene.exposure]);
+
   return (
-    <Canvas
-      camera={{ fov: 82, near: 0.1, far: 200, position: [0, 1.6, 6] }}
-      dpr={[1, 1.15]}
-      gl={{ antialias: true, powerPreference: 'high-performance' }}
-      onCreated={({ gl }) => {
-        gl.toneMappingExposure = 1.15;
-      }}
-    >
-      <color attach="background" args={['#140c22']} />
-      <fog attach="fog" args={['#26153c', 24, 106]} />
-      <Suspense fallback={null}>
+    <>
+      <color attach="background" args={[world.scene.backgroundColor]} />
+      <fog attach="fog" args={world.scene.fog} />
+      <group key={world.id}>
         <Lighting />
         <Tunnel />
         <Rails />
@@ -30,6 +31,20 @@ export function Scene() {
         <PlayerCamera />
         <GameLoop />
         <RenderStatsProbe />
+      </group>
+    </>
+  );
+}
+
+export function Scene() {
+  return (
+    <Canvas
+      camera={{ fov: 82, near: 0.1, far: 200, position: [0, 1.6, 6] }}
+      dpr={[1, 1.15]}
+      gl={{ antialias: true, powerPreference: 'high-performance' }}
+    >
+      <Suspense fallback={null}>
+        <SceneContent />
       </Suspense>
     </Canvas>
   );

@@ -3,6 +3,7 @@ import { useGameStore } from '../stores/gameStore';
 interface LeaderboardPanelProps {
   title?: string;
   className?: string;
+  limit?: number;
 }
 
 function formatDateLabel(value: string) {
@@ -20,10 +21,13 @@ function formatDateLabel(value: string) {
 export function LeaderboardPanel({
   title = 'Liderlik Tablosu',
   className = '',
+  limit = 20,
 }: LeaderboardPanelProps) {
   const leaderboard = useGameStore((state) => state.leaderboard);
   const leaderboardStatus = useGameStore((state) => state.leaderboardStatus);
   const playerName = useGameStore((state) => state.playerName);
+  const visibleLimit = Math.max(1, Math.floor(limit));
+  const visibleEntries = leaderboard.slice(0, visibleLimit);
 
   return (
     <div
@@ -34,21 +38,21 @@ export function LeaderboardPanel({
           {title}
         </div>
         <div className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/75">
-          İlk 20
+          Ilk {visibleLimit}
         </div>
       </div>
 
       {leaderboardStatus === 'loading' && leaderboard.length === 0 ? (
-        <div className="mt-5 text-sm text-white/65">Skorlar yükleniyor...</div>
+        <div className="mt-5 text-sm text-white/65">Skorlar yukleniyor...</div>
       ) : null}
 
       {leaderboardStatus !== 'loading' && leaderboard.length === 0 ? (
-        <div className="mt-5 text-sm text-white/65">Henüz skor yok.</div>
+        <div className="mt-5 text-sm text-white/65">Henuz skor yok.</div>
       ) : null}
 
-      {leaderboard.length > 0 ? (
+      {visibleEntries.length > 0 ? (
         <div className="mt-4 space-y-2">
-          {leaderboard.map((entry, index) => {
+          {visibleEntries.map((entry, index) => {
             const isOwnEntry = playerName.length > 0 && entry.name === playerName;
 
             return (

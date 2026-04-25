@@ -10,6 +10,8 @@ export type ControlMode = 'KEYBOARD' | 'CAMERA';
 export type CalibrationStep = 'CENTER' | 'CROUCH' | 'READY';
 export type LeaderboardStatus = 'idle' | 'loading' | 'ready' | 'error';
 
+export type WorldId = 'CANDY' | 'OCEAN';
+
 export type Lane = -1 | 0 | 1;
 
 export type Gesture = 'LEFT' | 'RIGHT' | 'SQUAT' | 'JUMP' | null;
