@@ -69,6 +69,7 @@ interface GameState {
   phase: GamePhase;
   controlMode: ControlMode | null;
   selectedWorld: WorldId;
+  readyWorlds: Partial<Record<WorldId, boolean>>;
   audioSettings: AudioSettingsState;
   playerName: string;
   leaderboard: LeaderboardEntry[];
@@ -109,6 +110,7 @@ interface GameState {
   startCalibration: () => void;
   restartRun: () => void;
   setSelectedWorld: (world: WorldId) => void;
+  markWorldReady: (world: WorldId) => void;
   setAudioSetting: <K extends keyof AudioSettingsState>(
     key: K,
     value: AudioSettingsState[K],
@@ -432,6 +434,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   phase: 'MENU',
   controlMode: null,
   selectedWorld: readSelectedWorld(),
+  readyWorlds: {},
   audioSettings: readAudioSettings(),
   playerName: readStoredPlayerName(),
   leaderboard: [],
@@ -497,6 +500,17 @@ export const useGameStore = create<GameState>((set, get) => ({
         ? state
         : {
             selectedWorld: writeSelectedWorld(world),
+          },
+    ),
+  markWorldReady: (world) =>
+    set((state) =>
+      state.readyWorlds[world]
+        ? state
+        : {
+            readyWorlds: {
+              ...state.readyWorlds,
+              [world]: true,
+            },
           },
     ),
   setAudioSetting: (key, value) =>

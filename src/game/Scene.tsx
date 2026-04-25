@@ -1,5 +1,6 @@
 import { Canvas, useThree } from '@react-three/fiber';
 import { Suspense, useEffect } from 'react';
+import type { WorldId } from '../types';
 import { useWorldDefinition } from '../worlds';
 import { Collectibles } from './Collectibles';
 import { GameLoop } from './GameLoop';
@@ -10,13 +11,21 @@ import { Rails } from './Rails';
 import { RenderStatsProbe } from './RenderStatsProbe';
 import { Tunnel } from './Tunnel';
 
-function SceneContent() {
+function SceneContent({
+  onWorldReady,
+}: {
+  onWorldReady: (worldId: WorldId) => void;
+}) {
   const world = useWorldDefinition();
   const { gl } = useThree();
 
   useEffect(() => {
     gl.toneMappingExposure = world.scene.exposure ?? 1.15;
   }, [gl, world.scene.exposure]);
+
+  useEffect(() => {
+    onWorldReady(world.id);
+  }, [onWorldReady, world.id]);
 
   return (
     <>
@@ -36,7 +45,11 @@ function SceneContent() {
   );
 }
 
-export function Scene() {
+export function Scene({
+  onWorldReady,
+}: {
+  onWorldReady: (worldId: WorldId) => void;
+}) {
   return (
     <Canvas
       camera={{ fov: 82, near: 0.1, far: 200, position: [0, 1.6, 6] }}
@@ -44,7 +57,7 @@ export function Scene() {
       gl={{ antialias: true, powerPreference: 'high-performance' }}
     >
       <Suspense fallback={null}>
-        <SceneContent />
+        <SceneContent onWorldReady={onWorldReady} />
       </Suspense>
     </Canvas>
   );

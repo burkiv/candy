@@ -21,6 +21,8 @@ export function useKeyboardControls() {
         startKeyboardRun,
         startCalibration,
         restartRun,
+        selectedWorld,
+        readyWorlds,
         changeLane,
         pauseRun,
         resumeRun,
@@ -30,6 +32,7 @@ export function useKeyboardControls() {
         toggleInvincibleMode,
       } = useGameStore.getState();
       const key = event.key.toLowerCase();
+      const isSelectedWorldReady = readyWorlds[selectedWorld] === true;
 
       if (key === 'escape' && !event.repeat) {
         event.preventDefault();
@@ -51,12 +54,21 @@ export function useKeyboardControls() {
       }
 
       if (phase === 'MENU' && event.key === 'Enter') {
+        if (!isSelectedWorldReady) {
+          return;
+        }
+
         startKeyboardRun();
         return;
       }
 
       if (phase === 'MENU' && key === 'c' && !event.repeat) {
         event.preventDefault();
+
+        if (!isSelectedWorldReady) {
+          return;
+        }
+
         startCalibration();
         return;
       }

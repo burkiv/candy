@@ -11,6 +11,7 @@ import { GestureLabel } from './ui/GestureLabel';
 import { HUD } from './ui/HUD';
 import { MenuScreen } from './ui/MenuScreen';
 import { PauseScreen } from './ui/PauseScreen';
+import { SceneLoadingOverlay } from './ui/SceneLoadingOverlay';
 
 function PhaseFlow() {
   const phase = useGameStore((state) => state.phase);
@@ -81,13 +82,15 @@ function Overlay() {
 
 export default function App() {
   useKeyboardControls();
+  const markWorldReady = useGameStore((state) => state.markWorldReady);
 
   return (
     <main className="relative h-screen overflow-hidden bg-tunnel-950 text-white">
       <PhaseFlow />
       <AudioController />
-      <Scene />
+      <Scene onWorldReady={markWorldReady} />
       <Overlay />
+      <SceneLoadingOverlay />
     </main>
   );
 }

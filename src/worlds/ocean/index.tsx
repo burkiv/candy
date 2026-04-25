@@ -1,4 +1,3 @@
-import { useGLTF } from '@react-three/drei';
 import type { WorldDefinition } from '../types';
 import { OceanLighting } from './OceanLighting';
 import { OceanTrack } from './OceanTrack';
@@ -106,8 +105,3 @@ export const oceanWorld: WorldDefinition = {
   Tunnel: OceanTunnel,
   Track: OceanTrack,
 };
-
-useGLTF.preload('/models/ocean-world/obstacle_jellyfish_curtain.glb');
-useGLTF.preload('/models/ocean-world/obstacle_coral_reef.glb');
-useGLTF.preload('/models/ocean-world/obstacle_sea_turtle.glb');
-useGLTF.preload('/models/ocean-world/obstacle_shipwreck.glb');

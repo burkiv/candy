@@ -8,6 +8,7 @@ export function MenuScreen() {
   const highScore = useGameStore((state) => state.highScore);
   const playerName = useGameStore((state) => state.playerName);
   const selectedWorld = useGameStore((state) => state.selectedWorld);
+  const readyWorlds = useGameStore((state) => state.readyWorlds);
   const setSelectedWorld = useGameStore((state) => state.setSelectedWorld);
   const setPlayerName = useGameStore((state) => state.setPlayerName);
   const loadLeaderboard = useGameStore((state) => state.loadLeaderboard);
@@ -15,7 +16,8 @@ export function MenuScreen() {
   const startCalibration = useGameStore((state) => state.startCalibration);
   const [draftName, setDraftName] = useState(playerName);
   const [isEditingName, setIsEditingName] = useState(playerName.length === 0);
-  const canStart = Boolean(playerName || draftName.trim());
+  const isSelectedWorldReady = readyWorlds[selectedWorld] === true;
+  const canStart = Boolean(playerName || draftName.trim()) && isSelectedWorldReady;
 
   useEffect(() => {
     void loadLeaderboard();
@@ -48,6 +50,10 @@ export function MenuScreen() {
   }
 
   function handleKeyboardStart() {
+    if (!isSelectedWorldReady) {
+      return;
+    }
+
     if (!ensurePlayerName()) {
       return;
     }
@@ -56,6 +62,10 @@ export function MenuScreen() {
   }
 
   function handleCameraStart() {
+    if (!isSelectedWorldReady) {
+      return;
+    }
+
     if (!ensurePlayerName()) {
       return;
     }
@@ -79,6 +89,11 @@ export function MenuScreen() {
               rehberli kalibrasyona girebilirsin. Haritayi menuden sec, sonra
               ayni oyun akisini farkli dunyalarda oyna.
             </p>
+            {!isSelectedWorldReady ? (
+              <div className="mt-5 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm text-cyan-100">
+                Sahne hazirlaniyor. Yukleme bitince baslat butonlari acilacak.
+              </div>
+            ) : null}
 
             <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4">
               <div className="text-xs uppercase tracking-[0.18em] text-white/45">
@@ -180,7 +195,9 @@ export function MenuScreen() {
                   Hemen Basla
                 </div>
                 <div className="mt-2 text-sm text-slate-900/72">
-                  Kamera acmadan direkt geri sayima girer.
+                  {isSelectedWorldReady
+                    ? 'Kamera acmadan direkt geri sayima girer.'
+                    : 'Modeller yuklenirken gecici olarak beklemede.'}
                 </div>
               </button>
               <button
@@ -196,7 +213,9 @@ export function MenuScreen() {
                   Rehberli Kalibrasyon
                 </div>
                 <div className="mt-2 text-sm text-white/72">
-                  Ortada dur, egil, sonra elini kaldirarak bilerek baslat.
+                  {isSelectedWorldReady
+                    ? 'Ortada dur, egil, sonra elini kaldirarak bilerek baslat.'
+                    : 'Sahne hazir oldugunda kalibrasyon acilacak.'}
                 </div>
               </button>
             </div>

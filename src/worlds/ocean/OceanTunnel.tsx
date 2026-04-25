@@ -475,10 +475,3 @@ export function OceanTunnel() {
     </group>
   );
 }
-
-useGLTF.preload('/models/ocean-world/tunnel_floor_sandy.glb');
-useGLTF.preload('/models/ocean-world/deco_coral_garden.glb');
-useGLTF.preload('/models/ocean-world/clownfish.glb');
-useGLTF.preload('/models/ocean-world/surgeonfish.glb');
-useGLTF.preload('/models/ocean-world/dolphin.glb');
-useGLTF.preload('/models/ocean-world/jellyfish.glb');
