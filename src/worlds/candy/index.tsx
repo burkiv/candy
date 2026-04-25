@@ -1,4 +1,3 @@
-import { useGLTF } from '@react-three/drei';
 import type { WorldDefinition } from '../types';
 import { CandyLighting } from './CandyLighting';
 import { CandyTrack } from './CandyTrack';
@@ -27,6 +26,16 @@ export const candyWorld: WorldDefinition = {
       html5: true,
     },
   },
+  preloadModelPaths: [
+    '/models/barrier_top.glb',
+    '/models/barrier_low.glb',
+    '/models/train.glb',
+    '/models/train_double.glb',
+    '/models/tunel_segment.glb',
+    '/models/jelly_crystal.glb',
+    '/models/icecream_pillar.glb',
+    '/models/cotton_candy_tree.glb',
+  ],
   obstacleModels: {
     BARRIER_TOP: {
       path: '/models/barrier_top.glb',
@@ -75,8 +84,3 @@ export const candyWorld: WorldDefinition = {
   Tunnel: CandyTunnel,
   Track: CandyTrack,
 };
-
-useGLTF.preload('/models/barrier_top.glb');
-useGLTF.preload('/models/barrier_low.glb');
-useGLTF.preload('/models/train.glb');
-useGLTF.preload('/models/train_double.glb');

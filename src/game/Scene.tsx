@@ -1,5 +1,6 @@
+import { useGLTF } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useMemo } from 'react';
 import type { WorldId } from '../types';
 import { useWorldDefinition } from '../worlds';
 import { Collectibles } from './Collectibles';
@@ -11,6 +12,13 @@ import { Rails } from './Rails';
 import { RenderStatsProbe } from './RenderStatsProbe';
 import { Tunnel } from './Tunnel';
 
+const COMMON_PRELOAD_MODEL_PATHS = ['/models/coin.glb', '/models/star.glb'];
+
+function WorldAssetPreloader({ paths }: { paths: string[] }) {
+  useGLTF(paths);
+  return null;
+}
+
 function SceneContent({
   onWorldReady,
 }: {
@@ -18,6 +26,10 @@ function SceneContent({
 }) {
   const world = useWorldDefinition();
   const { gl } = useThree();
+  const preloadPaths = useMemo(
+    () => [...COMMON_PRELOAD_MODEL_PATHS, ...world.preloadModelPaths],
+    [world.preloadModelPaths],
+  );
 
   useEffect(() => {
     gl.toneMappingExposure = world.scene.exposure ?? 1.15;
@@ -29,6 +41,7 @@ function SceneContent({
 
   return (
     <>
+      <WorldAssetPreloader paths={preloadPaths} />
       <color attach="background" args={[world.scene.backgroundColor]} />
       <fog attach="fog" args={world.scene.fog} />
       <group key={world.id}>

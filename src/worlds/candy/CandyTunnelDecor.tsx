@@ -1,4 +1,3 @@
-import { useGLTF } from '@react-three/drei';
 import { Fragment } from 'react';
 import { ModelAsset } from '../../game/ModelAsset';
 
@@ -107,8 +106,3 @@ export function CandyTunnelDecor({ segmentIndex }: CandyTunnelDecorProps) {
     </Fragment>
   );
 }
-
-useGLTF.preload('/models/tunel_segment.glb');
-useGLTF.preload('/models/jelly_crystal.glb');
-useGLTF.preload('/models/icecream_pillar.glb');
-useGLTF.preload('/models/cotton_candy_tree.glb');

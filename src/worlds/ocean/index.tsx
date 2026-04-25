@@ -52,6 +52,18 @@ export const oceanWorld: WorldDefinition = {
       maxDelayMs: 32000,
     },
   },
+  preloadModelPaths: [
+    '/models/ocean-world/obstacle_jellyfish_curtain.glb',
+    '/models/ocean-world/obstacle_coral_reef.glb',
+    '/models/ocean-world/obstacle_sea_turtle.glb',
+    '/models/ocean-world/obstacle_shipwreck.glb',
+    '/models/ocean-world/tunnel_floor_sandy.glb',
+    '/models/ocean-world/deco_coral_garden.glb',
+    '/models/ocean-world/clownfish.glb',
+    '/models/ocean-world/surgeonfish.glb',
+    '/models/ocean-world/dolphin.glb',
+    '/models/ocean-world/jellyfish.glb',
+  ],
   obstacleModels: {
     BARRIER_TOP: {
       path: '/models/ocean-world/obstacle_jellyfish_curtain.glb',

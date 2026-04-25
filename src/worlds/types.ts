@@ -58,6 +58,7 @@ export interface WorldDefinition {
   scene: WorldSceneConfig;
   menu: WorldMenuConfig;
   audio: WorldAudioConfig;
+  preloadModelPaths: string[];
   obstacleModels: Record<ObstacleType, WorldObstacleModelConfig>;
   Lighting: ComponentType;
   Tunnel: ComponentType;
