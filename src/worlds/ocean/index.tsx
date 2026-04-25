@@ -20,14 +20,18 @@ export const oceanWorld: WorldDefinition = {
     gradient: ['#073b4c', '#0ea5a3'],
   },
   audio: {
-    music: {
-      src: [
-        '/sounds/ocean/ocean_bg.mp3',
-        '/sounds/ocean/ocean_bg.ogg',
-        '/sounds/ocean/ocean_bg.wav',
-      ],
-      volume: 0.28,
-      html5: true,
+    defaultMusicVariantId: 'default',
+    musicVariants: {
+      default: {
+        label: 'Ocean Theme',
+        src: [
+          '/sounds/ocean/ocean_bg.mp3',
+          '/sounds/ocean/ocean_bg.ogg',
+          '/sounds/ocean/ocean_bg.wav',
+        ],
+        volume: 0.28,
+        html5: true,
+      },
     },
     ambience: {
       src: [

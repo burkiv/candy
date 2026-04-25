@@ -10,7 +10,8 @@ export type ControlMode = 'KEYBOARD' | 'CAMERA';
 export type CalibrationStep = 'CENTER' | 'CROUCH' | 'READY';
 export type LeaderboardStatus = 'idle' | 'loading' | 'ready' | 'error';
 
-export type WorldId = 'CANDY' | 'OCEAN';
+export const WORLD_IDS = ['CANDY', 'OCEAN'] as const;
+export type WorldId = (typeof WORLD_IDS)[number];
 
 export type Lane = -1 | 0 | 1;
 
@@ -23,6 +24,8 @@ export type ObstacleType =
   | 'TRAIN_DOUBLE';
 
 export type CollectibleType = 'COIN' | 'STAR';
+export type CurrencyType = 'COIN' | 'STAR';
+export type CatalogItemType = 'WORLD_UNLOCK' | 'MUSIC_VARIANT_UNLOCK';
 
 export interface Baseline {
   centerX: number;
@@ -47,6 +50,42 @@ export interface LeaderboardEntry {
   score: number;
   date: string;
 }
+
+export interface WalletState {
+  coins: number;
+  stars: number;
+}
+
+export interface ProgressionState {
+  wallet: WalletState;
+  unlockedWorldIds: WorldId[];
+  unlockedMusicVariantIds: string[];
+  selectedMusicVariantByWorld: Partial<Record<WorldId, string>>;
+}
+
+interface CatalogItemBase {
+  id: string;
+  type: CatalogItemType;
+  label: string;
+  description: string;
+  currency: CurrencyType;
+  cost: number;
+  defaultUnlocked: boolean;
+  active: boolean;
+}
+
+export interface WorldUnlockCatalogItem extends CatalogItemBase {
+  type: 'WORLD_UNLOCK';
+  worldId: WorldId;
+}
+
+export interface MusicVariantUnlockCatalogItem extends CatalogItemBase {
+  type: 'MUSIC_VARIANT_UNLOCK';
+  worldId: WorldId;
+  musicVariantId: string;
+}
+
+export type CatalogItem = WorldUnlockCatalogItem | MusicVariantUnlockCatalogItem;
 
 export interface Obstacle {
   id: string;

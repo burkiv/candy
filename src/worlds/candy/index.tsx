@@ -20,10 +20,14 @@ export const candyWorld: WorldDefinition = {
     gradient: ['#2f183f', '#8b4fd4'],
   },
   audio: {
-    music: {
-      src: ['/sounds/music.mp3', '/sounds/bgm.mp3', '/sounds/music.ogg'],
-      volume: 0.32,
-      html5: true,
+    defaultMusicVariantId: 'default',
+    musicVariants: {
+      default: {
+        label: 'Candy Theme',
+        src: ['/sounds/music.mp3', '/sounds/bgm.mp3', '/sounds/music.ogg'],
+        volume: 0.32,
+        html5: true,
+      },
     },
   },
   preloadModelPaths: [

@@ -40,6 +40,10 @@ export interface WorldAudioLoopConfig {
   html5?: boolean;
 }
 
+export interface WorldAudioMusicVariantConfig extends WorldAudioLoopConfig {
+  label: string;
+}
+
 export interface WorldAudioOccasionalConfig {
   src: string[];
   volume: number;
@@ -48,7 +52,8 @@ export interface WorldAudioOccasionalConfig {
 }
 
 export interface WorldAudioConfig {
-  music: WorldAudioLoopConfig;
+  defaultMusicVariantId: string;
+  musicVariants: Record<string, WorldAudioMusicVariantConfig>;
   ambience?: WorldAudioLoopConfig;
   occasional?: WorldAudioOccasionalConfig;
 }

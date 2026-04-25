@@ -4,7 +4,9 @@ import { useGameStore } from '../stores/gameStore';
 import { getWorldDefinition } from '../worlds';
 import type {
   WorldAudioLoopConfig,
+  WorldAudioMusicVariantConfig,
   WorldAudioOccasionalConfig,
+  WorldDefinition,
 } from '../worlds/types';
 
 const COMMON_SOUND_CONFIG = {
@@ -60,6 +62,17 @@ function createOccasionalSound(config: WorldAudioOccasionalConfig) {
   });
 }
 
+function resolveMusicVariant(
+  world: WorldDefinition,
+  selectedMusicVariantId?: string,
+): WorldAudioMusicVariantConfig {
+  return (
+    (selectedMusicVariantId
+      ? world.audio.musicVariants[selectedMusicVariantId]
+      : undefined) ?? world.audio.musicVariants[world.audio.defaultMusicVariantId]
+  );
+}
+
 function applyEffectsVolume(bank: CommonSoundBank, effectsVolume: number) {
   bank.coin.volume(COMMON_SOUND_CONFIG.coin.volume * effectsVolume);
   bank.hit.volume(COMMON_SOUND_CONFIG.hit.volume * effectsVolume);
@@ -70,12 +83,14 @@ function applyEffectsVolume(bank: CommonSoundBank, effectsVolume: number) {
 function applyWorldVolumes(
   bank: WorldSoundBank,
   worldId: ReturnType<typeof useGameStore.getState>['selectedWorld'],
+  selectedMusicVariantId: string | undefined,
   musicVolume: number,
   ambienceVolume: number,
 ) {
   const world = getWorldDefinition(worldId);
+  const music = resolveMusicVariant(world, selectedMusicVariantId);
 
-  bank.music.volume(world.audio.music.volume * musicVolume);
+  bank.music.volume(music.volume * musicVolume);
 
   if (bank.ambience && world.audio.ambience) {
     bank.ambience.volume(world.audio.ambience.volume * ambienceVolume);
@@ -90,6 +105,9 @@ export function AudioController() {
   const phase = useGameStore((state) => state.phase);
   const selectedWorld = useGameStore((state) => state.selectedWorld);
   const audioSettings = useGameStore((state) => state.audioSettings);
+  const selectedMusicVariantId = useGameStore(
+    (state) => state.progression.selectedMusicVariantByWorld[state.selectedWorld],
+  );
   const coinsCollected = useGameStore((state) => state.coinsCollected);
   const starsCollected = useGameStore((state) => state.starsCollected);
   const collisionCount = useGameStore((state) => state.collisionCount);
@@ -202,8 +220,9 @@ export function AudioController() {
 
   useEffect(() => {
     const world = getWorldDefinition(selectedWorld);
+    const music = resolveMusicVariant(world, selectedMusicVariantId);
     const bank: WorldSoundBank = {
-      music: createLoopingSound(world.audio.music),
+      music: createLoopingSound(music),
     };
 
     if (world.audio.ambience) {
@@ -217,6 +236,7 @@ export function AudioController() {
     applyWorldVolumes(
       bank,
       selectedWorld,
+      selectedMusicVariantId,
       audioSettings.musicVolume,
       audioSettings.ambienceVolume,
     );
@@ -237,7 +257,7 @@ export function AudioController() {
         worldSoundBankRef.current = null;
       }
     };
-  }, [selectedWorld]);
+  }, [selectedWorld, selectedMusicVariantId]);
 
   useEffect(() => {
     const bank = worldSoundBankRef.current;
@@ -249,11 +269,13 @@ export function AudioController() {
     applyWorldVolumes(
       bank,
       selectedWorld,
+      selectedMusicVariantId,
       audioSettings.musicVolume,
       audioSettings.ambienceVolume,
     );
   }, [
     selectedWorld,
+    selectedMusicVariantId,
     audioSettings.musicVolume,
     audioSettings.ambienceVolume,
   ]);

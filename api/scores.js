@@ -13,17 +13,38 @@ function normalizeEntry(entry) {
   return {
     name: normalizeName(entry?.name),
     score: Math.max(0, Math.floor(Number(entry?.score ?? 0))),
-    date:
-      typeof entry?.date === 'string' && entry.date.length > 0
-        ? entry.date
-        : new Date().toISOString(),
+    date: normalizeDate(entry?.date),
   };
 }
 
+function normalizeDate(value) {
+  const parsed = Date.parse(typeof value === 'string' ? value : '');
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : new Date().toISOString();
+}
+
+function shouldReplaceEntry(current, next) {
+  if (next.score !== current.score) {
+    return next.score > current.score;
+  }
+
+  return Date.parse(next.date) >= Date.parse(current.date);
+}
+
 function normalizeEntries(entries) {
-  return (Array.isArray(entries) ? entries : [])
+  const bestEntriesByName = new Map();
+
+  (Array.isArray(entries) ? entries : [])
     .map((entry) => normalizeEntry(entry))
     .filter((entry) => entry.name.length > 0)
+    .forEach((entry) => {
+      const current = bestEntriesByName.get(entry.name);
+
+      if (!current || shouldReplaceEntry(current, entry)) {
+        bestEntriesByName.set(entry.name, entry);
+      }
+    });
+
+  return [...bestEntriesByName.values()]
     .sort((left, right) => {
       if (right.score !== left.score) {
         return right.score - left.score;

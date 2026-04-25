@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
+import { getWorldCatalogItem, isCatalogItemUnlocked } from '../progression/catalog';
 import { useGameStore } from '../stores/gameStore';
 import { worldDefinitions, worldOrder } from '../worlds';
 import { AudioSettingsDialog } from './AudioSettingsDialog';
 import { LeaderboardPanel } from './LeaderboardPanel';
+import { ShopDialog } from './ShopDialog';
 
 export function MenuScreen() {
   const highScore = useGameStore((state) => state.highScore);
   const playerName = useGameStore((state) => state.playerName);
   const selectedWorld = useGameStore((state) => state.selectedWorld);
   const readyWorlds = useGameStore((state) => state.readyWorlds);
+  const progression = useGameStore((state) => state.progression);
   const setSelectedWorld = useGameStore((state) => state.setSelectedWorld);
   const setPlayerName = useGameStore((state) => state.setPlayerName);
   const loadLeaderboard = useGameStore((state) => state.loadLeaderboard);
@@ -103,17 +106,27 @@ export function MenuScreen() {
                 {worldOrder.map((worldId) => {
                   const world = worldDefinitions[worldId];
                   const isActive = selectedWorld === worldId;
+                  const worldItem = getWorldCatalogItem(worldId);
+                  const isUnlocked =
+                    !worldItem || isCatalogItemUnlocked(progression, worldItem);
 
                   return (
                     <button
                       key={worldId}
                       type="button"
-                      onClick={() => setSelectedWorld(worldId)}
+                      onClick={() => {
+                        if (isUnlocked) {
+                          setSelectedWorld(worldId);
+                        }
+                      }}
                       aria-pressed={isActive}
+                      disabled={!isUnlocked}
                       className={`rounded-xl border px-4 py-4 text-left transition ${
                         isActive
                           ? 'border-white/40 shadow-[0_0_0_1px_rgba(255,255,255,0.16)_inset]'
-                          : 'border-white/10 hover:border-white/20'
+                          : isUnlocked
+                            ? 'border-white/10 hover:border-white/20'
+                            : 'cursor-not-allowed border-white/8 opacity-65'
                       }`}
                       style={{
                         background: `linear-gradient(135deg, ${world.menu.gradient[0]}, ${world.menu.gradient[1]})`,
@@ -129,6 +142,10 @@ export function MenuScreen() {
                             style={{ backgroundColor: world.menu.accentColor }}
                           >
                             Secili
+                          </div>
+                        ) : !isUnlocked && worldItem ? (
+                          <div className="rounded-full bg-slate-950/45 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white">
+                            {worldItem.cost} Star
                           </div>
                         ) : null}
                       </div>
@@ -261,6 +278,27 @@ export function MenuScreen() {
               <div className="mt-8 rounded-lg border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
                 En iyi skor: <span className="font-bold text-amber-300">{highScore}</span>
               </div>
+            </div>
+
+            <div className="rounded-lg border border-white/10 bg-black/28 p-6 shadow-hud backdrop-blur-md">
+              <div className="text-xs uppercase tracking-[0.24em] text-white/45">
+                Koleksiyon
+              </div>
+              <div className="mt-3 text-sm leading-6 text-white/72">
+                Coin ve star bakiyeni takip et, yeni unlocklar geldiginde buradan ac.
+              </div>
+              <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                <div className="rounded-lg border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-amber-100">
+                  Coin <span className="ml-2 font-bold">{progression.wallet.coins}</span>
+                </div>
+                <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-cyan-100">
+                  Star <span className="ml-2 font-bold">{progression.wallet.stars}</span>
+                </div>
+              </div>
+              <ShopDialog
+                buttonLabel="Magaza / Koleksiyon"
+                buttonClassName="mt-5 w-full rounded-lg border border-white/15 bg-white/8 px-4 py-3 text-sm font-bold uppercase tracking-[0.16em] text-white transition hover:bg-white/12"
+              />
             </div>
 
             <div className="rounded-lg border border-white/10 bg-black/28 p-6 shadow-hud backdrop-blur-md">

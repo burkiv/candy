@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type {
   Baseline,
   CalibrationUiState,
+  CatalogItem,
   Collectible,
   CollectibleType,
   ControlMode,
@@ -12,8 +13,18 @@ import type {
   LeaderboardStatus,
   Obstacle,
   ObstacleType,
+  ProgressionState,
   WorldId,
 } from '../types';
+import {
+  addWalletRewards,
+  createDefaultProgressionState,
+  getCatalogItemById,
+  isMusicVariantUnlocked,
+  isWorldUnlocked,
+  normalizeProgressionState,
+  purchaseCatalogItemInProgression,
+} from '../progression/catalog';
 import {
   fetchLeaderboardEntries,
   readStoredPlayerName,
@@ -70,6 +81,7 @@ interface GameState {
   selectedWorld: WorldId;
   readyWorlds: Partial<Record<WorldId, boolean>>;
   audioSettings: AudioSettingsState;
+  progression: ProgressionState;
   playerName: string;
   leaderboard: LeaderboardEntry[];
   leaderboardStatus: LeaderboardStatus;
@@ -114,6 +126,8 @@ interface GameState {
     key: K,
     value: AudioSettingsState[K],
   ) => void;
+  purchaseCatalogItem: (itemId: string) => boolean;
+  selectMusicVariant: (world: WorldId, musicVariantId: string) => boolean;
   setPlayerName: (name: string) => void;
   loadLeaderboard: () => Promise<void>;
   submitLeaderboardScore: () => Promise<void>;
@@ -155,6 +169,8 @@ function readHighScore(): number {
   return raw ? Number.parseInt(raw, 10) || 0 : 0;
 }
 
+const PROGRESSION_STORAGE_KEY = 'candy-run-progression';
+
 function saveHighScore(score: number) {
   if (typeof window !== 'undefined') {
     window.localStorage.setItem('candy-run-high-score', String(score));
@@ -180,6 +196,34 @@ function writeSelectedWorld(world: WorldId) {
 
 function normalizeVolume(value: number) {
   return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 1));
+}
+
+function readProgression(): ProgressionState {
+  if (typeof window === 'undefined') {
+    return createDefaultProgressionState();
+  }
+
+  const raw = window.localStorage.getItem(PROGRESSION_STORAGE_KEY);
+
+  if (!raw) {
+    return createDefaultProgressionState();
+  }
+
+  try {
+    return normalizeProgressionState(JSON.parse(raw) as Partial<ProgressionState>);
+  } catch {
+    return createDefaultProgressionState();
+  }
+}
+
+function writeProgression(progression: ProgressionState) {
+  const normalized = normalizeProgressionState(progression);
+
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(PROGRESSION_STORAGE_KEY, JSON.stringify(normalized));
+  }
+
+  return normalized;
 }
 
 function readAudioSettings(): AudioSettingsState {
@@ -474,6 +518,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   selectedWorld: readSelectedWorld(),
   readyWorlds: {},
   audioSettings: readAudioSettings(),
+  progression: readProgression(),
   playerName: readStoredPlayerName(),
   leaderboard: [],
   leaderboardStatus: 'idle',
@@ -534,7 +579,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }),
   setSelectedWorld: (world) =>
     set((state) =>
-      state.selectedWorld === world
+      state.selectedWorld === world || !isWorldUnlocked(state.progression, world)
         ? state
         : {
             selectedWorld: writeSelectedWorld(world),
@@ -566,6 +611,62 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       return { audioSettings };
     }),
+  purchaseCatalogItem: (itemId) => {
+    const state = get();
+    const item = getCatalogItemById(itemId);
+
+    if (!item) {
+      return false;
+    }
+
+    const nextProgression = purchaseCatalogItemInProgression(state.progression, item);
+
+    if (!nextProgression) {
+      return false;
+    }
+
+    if (nextProgression === state.progression) {
+      return true;
+    }
+
+    set({
+      progression: writeProgression(nextProgression),
+    });
+
+    return true;
+  },
+  selectMusicVariant: (world, musicVariantId) => {
+    const trimmedVariantId = musicVariantId.trim();
+
+    if (!trimmedVariantId) {
+      return false;
+    }
+
+    const state = get();
+    const isUnlocked =
+      trimmedVariantId === 'default' ||
+      isMusicVariantUnlocked(state.progression, world, trimmedVariantId);
+
+    if (!isUnlocked) {
+      return false;
+    }
+
+    if (state.progression.selectedMusicVariantByWorld[world] === trimmedVariantId) {
+      return true;
+    }
+
+    set({
+      progression: writeProgression({
+        ...state.progression,
+        selectedMusicVariantByWorld: {
+          ...state.progression.selectedMusicVariantByWorld,
+          [world]: trimmedVariantId,
+        },
+      }),
+    });
+
+    return true;
+  },
   setPlayerName: (name) =>
     set({
       playerName: writeStoredPlayerName(name),
@@ -783,6 +884,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       let avoided = state.obstaclesAvoided;
       let coinsCollected = state.coinsCollected;
       let starsCollected = state.starsCollected;
+      let coinsEarnedThisFrame = 0;
+      let starsEarnedThisFrame = 0;
       let nextScore = state.score + delta * SCORE_RATE * nextSpeed;
       let collisionsThisFrame = 0;
 
@@ -850,9 +953,11 @@ export const useGameStore = create<GameState>((set, get) => ({
           if (!collectible.collected && collected) {
             if (collectible.type === 'STAR') {
               starsCollected += 1;
+              starsEarnedThisFrame += 1;
               nextScore += STAR_SCORE_BONUS;
             } else {
               coinsCollected += 1;
+              coinsEarnedThisFrame += 1;
               nextScore += COIN_SCORE_BONUS;
             }
           }
@@ -873,6 +978,15 @@ export const useGameStore = create<GameState>((set, get) => ({
         0,
         (collision ? 0.48 : state.impactTimeLeft) - delta,
       );
+      const nextProgression =
+        coinsEarnedThisFrame > 0 || starsEarnedThisFrame > 0
+          ? writeProgression(
+              addWalletRewards(state.progression, {
+                coins: coinsEarnedThisFrame,
+                stars: starsEarnedThisFrame,
+              }),
+            )
+          : state.progression;
 
       if (collision && !state.invincibleMode && nextHitCooldownTime <= 0) {
         const nextLives = Math.max(0, state.livesRemaining - 1);
@@ -904,6 +1018,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             obstaclesAvoided: avoided,
             coinsCollected,
             starsCollected,
+            progression: nextProgression,
           };
         }
 
@@ -926,6 +1041,7 @@ export const useGameStore = create<GameState>((set, get) => ({
           obstaclesAvoided: avoided,
           coinsCollected,
           starsCollected,
+          progression: nextProgression,
         };
       }
 
@@ -948,6 +1064,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         obstaclesAvoided: avoided,
         coinsCollected,
         starsCollected,
+        progression: nextProgression,
       };
     }),
   spawnRandomObstacle: () =>
