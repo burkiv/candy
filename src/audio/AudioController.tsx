@@ -279,8 +279,9 @@ export function AudioController() {
     function unlockAudio() {
       audioUnlockedRef.current = true;
       const bank = worldSoundBankRef.current;
+      const currentPhase = useGameStore.getState().phase;
 
-      if (!bank || phase === 'GAME_OVER') {
+      if (!bank || currentPhase === 'GAME_OVER') {
         return;
       }
 
@@ -302,7 +303,7 @@ export function AudioController() {
       window.removeEventListener('click', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
     };
-  }, [phase, selectedWorld]);
+  }, []);
 
   useEffect(() => {
     const bank = worldSoundBankRef.current;
