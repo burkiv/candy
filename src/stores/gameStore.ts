@@ -70,6 +70,7 @@ import {
 } from '../utils/math';
 
 type Direction = 'LEFT' | 'RIGHT';
+let leaderboardRequestSequence = 0;
 
 interface AudioSettingsState {
   musicVolume: number;
@@ -134,7 +135,10 @@ interface GameState {
   purchaseCatalogItem: (itemId: string) => boolean;
   selectMusicVariant: (world: WorldId, musicVariantId: string) => boolean;
   setPlayerName: (name: string) => void;
-  loadLeaderboard: () => Promise<void>;
+  loadLeaderboard: (
+    worldId?: WorldId,
+    controlMode?: ControlMode,
+  ) => Promise<void>;
   submitLeaderboardScore: () => Promise<void>;
   beginCountdown: () => void;
   startRun: () => void;
@@ -680,17 +684,33 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({
       playerName: writeStoredPlayerName(name),
     }),
-  loadLeaderboard: async () => {
+  loadLeaderboard: async (worldId, controlMode) => {
+    const state = get();
+    const targetWorld = worldId ?? state.selectedWorld;
+    const targetControlMode =
+      controlMode ?? state.controlMode ?? 'CAMERA';
+    const requestId = ++leaderboardRequestSequence;
+
     set({ leaderboardStatus: 'loading' });
 
     try {
-      const leaderboard = await fetchLeaderboardEntries();
+      const leaderboard = await fetchLeaderboardEntries(
+        targetWorld,
+        targetControlMode,
+      );
+
+      if (requestId !== leaderboardRequestSequence) {
+        return;
+      }
+
       set({
         leaderboard,
         leaderboardStatus: 'ready',
       });
     } catch {
-      set({ leaderboardStatus: 'error' });
+      if (requestId === leaderboardRequestSequence) {
+        set({ leaderboardStatus: 'error' });
+      }
     }
   },
   submitLeaderboardScore: async () => {
@@ -701,6 +721,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       return;
     }
 
+    const requestId = ++leaderboardRequestSequence;
     set({ leaderboardStatus: 'loading' });
 
     try {
@@ -708,14 +729,22 @@ export const useGameStore = create<GameState>((set, get) => ({
         name,
         score: state.score,
         date: new Date().toISOString(),
+        worldId: state.selectedWorld,
+        controlMode: state.controlMode ?? 'KEYBOARD',
       });
+
+      if (requestId !== leaderboardRequestSequence) {
+        return;
+      }
 
       set({
         leaderboard,
         leaderboardStatus: 'ready',
       });
     } catch {
-      set({ leaderboardStatus: 'error' });
+      if (requestId === leaderboardRequestSequence) {
+        set({ leaderboardStatus: 'error' });
+      }
     }
   },
   beginCountdown: () =>

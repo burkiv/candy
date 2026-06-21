@@ -16,7 +16,6 @@ export function MenuScreen() {
   const setSelectedWorld = useGameStore((state) => state.setSelectedWorld);
   const setRunMode = useGameStore((state) => state.setRunMode);
   const setPlayerName = useGameStore((state) => state.setPlayerName);
-  const loadLeaderboard = useGameStore((state) => state.loadLeaderboard);
   const startKeyboardRun = useGameStore((state) => state.startKeyboardRun);
   const startCalibration = useGameStore((state) => state.startCalibration);
   const [draftName, setDraftName] = useState(playerName);
@@ -25,10 +24,6 @@ export function MenuScreen() {
   const canStart =
     isSelectedWorldReady &&
     (runMode === 'ENDLESS' || Boolean(playerName || draftName.trim()));
-
-  useEffect(() => {
-    void loadLeaderboard();
-  }, [loadLeaderboard]);
 
   useEffect(() => {
     setDraftName(playerName);

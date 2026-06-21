@@ -11,7 +11,6 @@ export function GameOverScreen() {
   const speed = useGameStore((state) => state.speed);
   const obstaclesAvoided = useGameStore((state) => state.obstaclesAvoided);
   const controlMode = useGameStore((state) => state.controlMode);
-  const loadLeaderboard = useGameStore((state) => state.loadLeaderboard);
   const submitLeaderboardScore = useGameStore((state) => state.submitLeaderboardScore);
   const restartRun = useGameStore((state) => state.restartRun);
   const returnToMenu = useGameStore((state) => state.returnToMenu);
@@ -19,11 +18,13 @@ export function GameOverScreen() {
   useEffect(() => {
     if (playerName) {
       void submitLeaderboardScore();
-      return;
     }
-
-    void loadLeaderboard();
-  }, [loadLeaderboard, playerName, submitLeaderboardScore, score, time]);
+  }, [
+    playerName,
+    submitLeaderboardScore,
+    score,
+    time,
+  ]);
 
   return (
     <div className="absolute inset-0 flex items-center justify-center px-4">

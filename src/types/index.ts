@@ -51,6 +51,8 @@ export interface LeaderboardEntry {
   name: string;
   score: number;
   date: string;
+  worldId: WorldId;
+  controlMode: ControlMode;
 }
 
 export interface WalletState {

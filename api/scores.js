@@ -1,6 +1,8 @@
 import { kv } from '@vercel/kv';
 
 const SCORE_KEY = 'candy-run:scores';
+const WORLD_IDS = new Set(['CANDY', 'OCEAN']);
+const CONTROL_MODES = new Set(['KEYBOARD', 'CAMERA']);
 
 function normalizeName(name) {
   return String(name ?? '')
@@ -14,6 +16,10 @@ function normalizeEntry(entry) {
     name: normalizeName(entry?.name),
     score: Math.max(0, Math.floor(Number(entry?.score ?? 0))),
     date: normalizeDate(entry?.date),
+    worldId: WORLD_IDS.has(entry?.worldId) ? entry.worldId : 'CANDY',
+    controlMode: CONTROL_MODES.has(entry?.controlMode)
+      ? entry.controlMode
+      : 'KEYBOARD',
   };
 }
 
@@ -31,20 +37,54 @@ function shouldReplaceEntry(current, next) {
 }
 
 function normalizeEntries(entries) {
-  const bestEntriesByName = new Map();
+  const bestEntriesByGroupAndName = new Map();
 
   (Array.isArray(entries) ? entries : [])
     .map((entry) => normalizeEntry(entry))
     .filter((entry) => entry.name.length > 0)
     .forEach((entry) => {
-      const current = bestEntriesByName.get(entry.name);
+      const key = `${entry.worldId}:${entry.controlMode}:${entry.name}`;
+      const current = bestEntriesByGroupAndName.get(key);
 
       if (!current || shouldReplaceEntry(current, entry)) {
-        bestEntriesByName.set(entry.name, entry);
+        bestEntriesByGroupAndName.set(key, entry);
       }
     });
 
-  return [...bestEntriesByName.values()]
+  const entriesByGroup = new Map();
+
+  bestEntriesByGroupAndName.forEach((entry) => {
+    const groupKey = `${entry.worldId}:${entry.controlMode}`;
+    const group = entriesByGroup.get(groupKey) ?? [];
+    group.push(entry);
+    entriesByGroup.set(groupKey, group);
+  });
+
+  return [...entriesByGroup.values()].flatMap((group) =>
+    group
+      .sort((left, right) => {
+        if (right.score !== left.score) {
+          return right.score - left.score;
+        }
+
+        return Date.parse(right.date) - Date.parse(left.date);
+      })
+      .slice(0, 20),
+  );
+}
+
+function filterEntries(entries, worldId, controlMode) {
+  const normalizedWorldId = WORLD_IDS.has(worldId) ? worldId : 'CANDY';
+  const normalizedControlMode = CONTROL_MODES.has(controlMode)
+    ? controlMode
+    : 'KEYBOARD';
+
+  return entries
+    .filter(
+      (entry) =>
+        entry.worldId === normalizedWorldId &&
+        entry.controlMode === normalizedControlMode,
+    )
     .sort((left, right) => {
       if (right.score !== left.score) {
         return right.score - left.score;
@@ -71,7 +111,13 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const scores = await readScores();
-      return res.status(200).json({ scores });
+      return res.status(200).json({
+        scores: filterEntries(
+          scores,
+          req.query?.worldId,
+          req.query?.controlMode,
+        ),
+      });
     }
 
     if (req.method === 'POST') {
@@ -85,7 +131,13 @@ export default async function handler(req, res) {
 
       const scores = normalizeEntries([nextEntry, ...(await readScores())]);
       await kv.set(SCORE_KEY, scores);
-      return res.status(200).json({ scores });
+      return res.status(200).json({
+        scores: filterEntries(
+          scores,
+          nextEntry.worldId,
+          nextEntry.controlMode,
+        ),
+      });
     }
 
     res.setHeader('Allow', 'GET, POST');

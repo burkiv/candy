@@ -1,4 +1,8 @@
-import type { LeaderboardEntry } from '../types';
+import type {
+  ControlMode,
+  LeaderboardEntry,
+  WorldId,
+} from '../types';
 
 const PLAYER_NAME_KEY = 'candy-run-player-name';
 const LOCAL_SCORES_KEY = 'candy-run-local-scores';
@@ -12,6 +16,18 @@ function normalizeDate(value: string) {
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : new Date().toISOString();
 }
 
+function normalizeWorldId(value: unknown): WorldId {
+  return value === 'OCEAN' ? 'OCEAN' : 'CANDY';
+}
+
+function normalizeControlMode(value: unknown): ControlMode {
+  return value === 'CAMERA' ? 'CAMERA' : 'KEYBOARD';
+}
+
+function getEntryKey(entry: LeaderboardEntry) {
+  return `${entry.worldId}:${entry.controlMode}:${entry.name}`;
+}
+
 function shouldReplaceEntry(current: LeaderboardEntry, next: LeaderboardEntry) {
   if (next.score !== current.score) {
     return next.score > current.score;
@@ -21,24 +37,58 @@ function shouldReplaceEntry(current: LeaderboardEntry, next: LeaderboardEntry) {
 }
 
 function normalizeEntries(entries: LeaderboardEntry[]) {
-  const bestEntriesByName = new Map<string, LeaderboardEntry>();
+  const bestEntriesByGroupAndName = new Map<string, LeaderboardEntry>();
 
   entries
     .map((entry) => ({
       name: normalizeName(entry.name),
       score: Math.max(0, Math.floor(entry.score)),
       date: normalizeDate(entry.date || new Date().toISOString()),
+      worldId: normalizeWorldId(entry.worldId),
+      controlMode: normalizeControlMode(entry.controlMode),
     }))
     .filter((entry) => entry.name.length > 0)
     .forEach((entry) => {
-      const current = bestEntriesByName.get(entry.name);
+      const key = getEntryKey(entry);
+      const current = bestEntriesByGroupAndName.get(key);
 
       if (!current || shouldReplaceEntry(current, entry)) {
-        bestEntriesByName.set(entry.name, entry);
+        bestEntriesByGroupAndName.set(key, entry);
       }
     });
 
-  return [...bestEntriesByName.values()]
+  const entriesByGroup = new Map<string, LeaderboardEntry[]>();
+
+  bestEntriesByGroupAndName.forEach((entry) => {
+    const groupKey = `${entry.worldId}:${entry.controlMode}`;
+    const group = entriesByGroup.get(groupKey) ?? [];
+    group.push(entry);
+    entriesByGroup.set(groupKey, group);
+  });
+
+  return [...entriesByGroup.values()].flatMap((group) =>
+    group
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+
+      return Date.parse(right.date) - Date.parse(left.date);
+    })
+      .slice(0, 20),
+  );
+}
+
+function filterEntries(
+  entries: LeaderboardEntry[],
+  worldId: WorldId,
+  controlMode: ControlMode,
+) {
+  return entries
+    .filter(
+      (entry) =>
+        entry.worldId === worldId && entry.controlMode === controlMode,
+    )
     .sort((left, right) => {
       if (right.score !== left.score) {
         return right.score - left.score;
@@ -96,9 +146,13 @@ export function writeStoredPlayerName(name: string) {
   return normalized;
 }
 
-export async function fetchLeaderboardEntries() {
+export async function fetchLeaderboardEntries(
+  worldId: WorldId,
+  controlMode: ControlMode,
+) {
   try {
-    const response = await fetch('/api/scores');
+    const params = new URLSearchParams({ worldId, controlMode });
+    const response = await fetch(`/api/scores?${params.toString()}`);
     if (!response.ok) {
       throw new Error(`scores:${response.status}`);
     }
@@ -106,7 +160,7 @@ export async function fetchLeaderboardEntries() {
     const payload = (await response.json()) as { scores?: LeaderboardEntry[] };
     return normalizeEntries(payload.scores ?? []);
   } catch {
-    return readLocalScores();
+    return filterEntries(readLocalScores(), worldId, controlMode);
   }
 }
 
@@ -115,10 +169,15 @@ export async function submitLeaderboardEntry(entry: LeaderboardEntry) {
     name: normalizeName(entry.name),
     score: Math.max(0, Math.floor(entry.score)),
     date: normalizeDate(entry.date || new Date().toISOString()),
+    worldId: normalizeWorldId(entry.worldId),
+    controlMode: normalizeControlMode(entry.controlMode),
   };
 
   if (!normalizedEntry.name) {
-    return fetchLeaderboardEntries();
+    return fetchLeaderboardEntries(
+      normalizedEntry.worldId,
+      normalizedEntry.controlMode,
+    );
   }
 
   try {
@@ -142,6 +201,10 @@ export async function submitLeaderboardEntry(entry: LeaderboardEntry) {
       ...readLocalScores(),
     ]);
     writeLocalScores(localEntries);
-    return localEntries;
+    return filterEntries(
+      localEntries,
+      normalizedEntry.worldId,
+      normalizedEntry.controlMode,
+    );
   }
 }
