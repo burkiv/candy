@@ -26,7 +26,6 @@ export const candyWorld: WorldDefinition = {
         label: 'Candy Theme',
         src: ['/sounds/music.mp3', '/sounds/bgm.mp3', '/sounds/music.ogg'],
         volume: 0.32,
-        html5: true,
       },
     },
   },

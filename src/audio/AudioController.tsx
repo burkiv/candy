@@ -51,8 +51,6 @@ function createLoopingSound(config: WorldAudioLoopConfig) {
     src: config.src,
     loop: true,
     volume: config.volume,
-    html5: config.html5,
-    preload: config.html5 ? false : true,
   });
 }
 

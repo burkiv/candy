@@ -30,7 +30,6 @@ export const oceanWorld: WorldDefinition = {
           '/sounds/ocean/ocean_bg.wav',
         ],
         volume: 0.28,
-        html5: true,
       },
     },
     ambience: {
@@ -40,7 +39,6 @@ export const oceanWorld: WorldDefinition = {
         '/sounds/ocean/underwater_ambience.wav',
       ],
       volume: 0.12,
-      html5: true,
     },
     occasional: {
       src: [

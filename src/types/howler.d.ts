@@ -4,7 +4,6 @@ declare module 'howler' {
     volume?: number;
     loop?: boolean;
     html5?: boolean;
-    preload?: boolean | 'metadata';
   }
 
   export class Howl {
