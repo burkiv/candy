@@ -44,7 +44,7 @@ export function CameraFeed({
         ref={canvasRef}
         width={640}
         height={480}
-        className="pointer-events-none absolute inset-0 h-full w-full scale-x-[-1]"
+        className="pointer-events-none absolute inset-0 h-full w-full scale-x-[-1] object-contain"
       />
       <div className={`absolute left-3 top-3 rounded bg-black/60 px-2 py-1 font-semibold uppercase tracking-[0.18em] text-cyan-200 ${fullscreen ? 'text-xs' : 'text-[10px]'}`}>
         Kamera Modu

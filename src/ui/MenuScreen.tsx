@@ -9,10 +9,12 @@ import { ShopDialog } from './ShopDialog';
 export function MenuScreen() {
   const highScore = useGameStore((state) => state.highScore);
   const playerName = useGameStore((state) => state.playerName);
+  const runMode = useGameStore((state) => state.runMode);
   const selectedWorld = useGameStore((state) => state.selectedWorld);
   const readyWorlds = useGameStore((state) => state.readyWorlds);
   const progression = useGameStore((state) => state.progression);
   const setSelectedWorld = useGameStore((state) => state.setSelectedWorld);
+  const setRunMode = useGameStore((state) => state.setRunMode);
   const setPlayerName = useGameStore((state) => state.setPlayerName);
   const loadLeaderboard = useGameStore((state) => state.loadLeaderboard);
   const startKeyboardRun = useGameStore((state) => state.startKeyboardRun);
@@ -20,7 +22,9 @@ export function MenuScreen() {
   const [draftName, setDraftName] = useState(playerName);
   const [isEditingName, setIsEditingName] = useState(playerName.length === 0);
   const isSelectedWorldReady = readyWorlds[selectedWorld] === true;
-  const canStart = Boolean(playerName || draftName.trim()) && isSelectedWorldReady;
+  const canStart =
+    isSelectedWorldReady &&
+    (runMode === 'ENDLESS' || Boolean(playerName || draftName.trim()));
 
   useEffect(() => {
     void loadLeaderboard();
@@ -45,6 +49,10 @@ export function MenuScreen() {
   }
 
   function ensurePlayerName() {
+    if (runMode === 'ENDLESS') {
+      return true;
+    }
+
     if (playerName && !isEditingName) {
       return true;
     }
@@ -163,6 +171,50 @@ export function MenuScreen() {
 
             <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4">
               <div className="text-xs uppercase tracking-[0.18em] text-white/45">
+                Koşu Türü
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setRunMode('SCORE')}
+                  aria-pressed={runMode === 'SCORE'}
+                  className={`rounded-xl border px-4 py-4 text-left transition ${
+                    runMode === 'SCORE'
+                      ? 'border-amber-300/50 bg-amber-300/15'
+                      : 'border-white/10 bg-black/20 hover:border-white/20'
+                  }`}
+                >
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-amber-200">
+                    Normal
+                  </div>
+                  <div className="mt-2 text-xl font-black">Skor Koşusu</div>
+                  <div className="mt-2 text-sm leading-6 text-white/65">
+                    Üç can, rekor, ödüller ve liderlik tablosu.
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRunMode('ENDLESS')}
+                  aria-pressed={runMode === 'ENDLESS'}
+                  className={`rounded-xl border px-4 py-4 text-left transition ${
+                    runMode === 'ENDLESS'
+                      ? 'border-emerald-300/50 bg-emerald-300/15'
+                      : 'border-white/10 bg-black/20 hover:border-white/20'
+                  }`}
+                >
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">
+                    Sonsuz
+                  </div>
+                  <div className="mt-2 text-xl font-black">Spor Modu</div>
+                  <div className="mt-2 text-sm leading-6 text-white/65">
+                    Can bitmez; skor, ödül ve leaderboard kaydı yapılmaz.
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-white/45">
                 Oyuncu Adi
               </div>
               {isEditingName ? (
@@ -263,6 +315,12 @@ export function MenuScreen() {
                 <div className="flex items-center justify-between gap-4">
                   <span>Kamera</span>
                   <span className="font-semibold text-cyan-200">3 adimli senkron</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span>Koşu</span>
+                  <span className="font-semibold text-cyan-200">
+                    {runMode === 'ENDLESS' ? 'Sonsuz Spor' : 'Skor'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <span>Harita</span>

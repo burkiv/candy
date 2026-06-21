@@ -198,12 +198,26 @@ export function isJump(
 ): boolean {
   const shoulderLift = baseline.shoulderY - metrics.shoulderY;
   const hipLift = baseline.hipY - metrics.hipY;
+  const shoulderThreshold = Math.max(
+    0.018,
+    Math.min(
+      MOTION_CONFIG.jumpDisplacementThreshold,
+      baseline.torsoHeight * 0.12,
+    ),
+  );
+  const hipThreshold = Math.max(
+    0.008,
+    Math.min(
+      MOTION_CONFIG.jumpHipDisplacementThreshold,
+      baseline.torsoHeight * 0.06,
+    ),
+  );
   const torsoRatio =
     baseline.torsoHeight > 0 ? metrics.torsoHeight / baseline.torsoHeight : 1;
 
   return (
-    shoulderLift > MOTION_CONFIG.jumpDisplacementThreshold &&
-    hipLift > MOTION_CONFIG.jumpHipDisplacementThreshold &&
+    shoulderLift > shoulderThreshold &&
+    hipLift > hipThreshold &&
     torsoRatio > 0.85
   );
 }

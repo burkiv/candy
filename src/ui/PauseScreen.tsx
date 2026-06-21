@@ -1,9 +1,14 @@
 import { useGameStore } from '../stores/gameStore';
+import { formatTime } from '../utils/math';
 import { AudioSettingsDialog } from './AudioSettingsDialog';
 
 export function PauseScreen() {
   const score = useGameStore((state) => state.score);
+  const time = useGameStore((state) => state.time);
+  const distance = useGameStore((state) => state.distance);
   const livesRemaining = useGameStore((state) => state.livesRemaining);
+  const runMode = useGameStore((state) => state.runMode);
+  const pauseReason = useGameStore((state) => state.pauseReason);
   const resumeRun = useGameStore((state) => state.resumeRun);
   const returnToMenu = useGameStore((state) => state.returnToMenu);
 
@@ -11,29 +16,37 @@ export function PauseScreen() {
     <div className="absolute inset-0 flex items-center justify-center px-4">
       <div className="w-full max-w-2xl rounded-lg border border-white/10 bg-black/50 p-6 shadow-hud backdrop-blur-md sm:p-8">
         <div className="text-sm uppercase tracking-[0.24em] text-cyan-200/80">
-          Duraklatildi
+          {pauseReason === 'TRACKING_LOST' ? 'Kamera Takibi Durdu' : 'Duraklatıldı'}
         </div>
         <div className="mt-3 text-5xl font-black leading-none sm:text-6xl">
           Candy Run beklemede
         </div>
         <p className="mt-4 text-sm leading-6 text-white/72 sm:text-base">
-          Nefes al, ellerini topla, sonra devam ederiz.
+          {pauseReason === 'TRACKING_LOST'
+            ? 'Kamera seni birkaç saniye göremediği için spor seansını güvenle durdurduk. Kadraja dönünce devam edebilirsin.'
+            : 'Nefes al, ellerini topla, sonra devam ederiz.'}
         </p>
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-lg border border-white/10 bg-white/5 p-4">
             <div className="text-xs uppercase tracking-[0.18em] text-white/45">
-              Skor
+              {runMode === 'ENDLESS' ? 'Mesafe' : 'Skor'}
             </div>
-            <div className="mt-2 text-2xl font-black">{Math.floor(score)}</div>
+            <div className="mt-2 text-2xl font-black">
+              {runMode === 'ENDLESS'
+                ? `${Math.floor(distance)} m`
+                : Math.floor(score)}
+            </div>
           </div>
           <div className="rounded-lg border border-white/10 bg-white/5 p-4">
             <div className="text-xs uppercase tracking-[0.18em] text-white/45">
-              Can
+              {runMode === 'ENDLESS' ? 'Süre' : 'Can'}
             </div>
             <div className="mt-2 text-2xl font-black text-amber-300">
-              {Array.from({ length: livesRemaining })
-                .map(() => 'O')
-                .join(' ')}
+              {runMode === 'ENDLESS'
+                ? `${formatTime(time)}s`
+                : Array.from({ length: livesRemaining })
+                    .map(() => 'O')
+                    .join(' ')}
             </div>
           </div>
         </div>

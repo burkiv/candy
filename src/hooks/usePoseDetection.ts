@@ -278,6 +278,7 @@ export function usePoseDetection({
   const setCameraReady = useGameStore((state) => state.setCameraReady);
   const setPoseConfidence = useGameStore((state) => state.setPoseConfidence);
   const setPoseSquatting = useGameStore((state) => state.setPoseSquatting);
+  const pauseRun = useGameStore((state) => state.pauseRun);
   const triggerJump = useGameStore((state) => state.triggerJump);
 
   const [statusLabel, setStatusLabel] = useState('Kamera açılıyor');
@@ -291,8 +292,8 @@ export function usePoseDetection({
   const lastVideoTimeRef = useRef(-1);
   const lastInferenceAtRef = useRef(0);
   const lastJumpAtRef = useRef(0);
+  const trackingLostStartedAtRef = useRef(0);
   const guideCenterXRef = useRef(0.5);
-  const guideCenterLockedRef = useRef(false);
   const bodyMarkerRef = useRef<BodyMarker | null>(null);
   const lostFramesRef = useRef(0);
   const smoothedMetricsRef = useRef<PoseMetrics | null>(null);
@@ -326,13 +327,39 @@ export function usePoseDetection({
     setStatusLabel(nextStatusLabel);
   }
 
+  function pauseEndlessRunIfTrackingIsLost(now: number) {
+    const game = useGameStore.getState();
+
+    if (
+      game.phase !== 'PLAYING' ||
+      game.controlMode !== 'CAMERA' ||
+      game.runMode !== 'ENDLESS'
+    ) {
+      trackingLostStartedAtRef.current = 0;
+      return;
+    }
+
+    if (trackingLostStartedAtRef.current === 0) {
+      trackingLostStartedAtRef.current = now;
+      return;
+    }
+
+    if (
+      now - trackingLostStartedAtRef.current >=
+      MOTION_CONFIG.trackingLostPauseMs
+    ) {
+      trackingLostStartedAtRef.current = 0;
+      setStatusLabel('Takip kayboldu');
+      pauseRun('TRACKING_LOST');
+    }
+  }
+
   useEffect(() => {
     phaseRef.current = phase;
 
     if (phase === 'CALIBRATION') {
       resetCalibrationFlow();
       guideCenterXRef.current = 0.5;
-      guideCenterLockedRef.current = false;
       setGuideZone('NONE');
       setError(null);
     }
@@ -342,6 +369,7 @@ export function usePoseDetection({
       squatFramesRef.current = { on: 0, off: 0 };
       jumpFramesRef.current = 0;
       lostFramesRef.current = 0;
+      trackingLostStartedAtRef.current = 0;
       smoothedMetricsRef.current = null;
       lastJumpAtRef.current = 0;
       bodyMarkerRef.current = null;
@@ -493,6 +521,7 @@ export function usePoseDetection({
 
             if (!landmarks) {
               lostFramesRef.current += 1;
+              pauseEndlessRunIfTrackingIsLost(now);
               bodyMarkerRef.current = null;
               setGuideZone('NONE');
               setPoseConfidence(0);
@@ -517,6 +546,7 @@ export function usePoseDetection({
 
               if (confidence < MOTION_CONFIG.minPoseConfidence) {
                 lostFramesRef.current += 1;
+                pauseEndlessRunIfTrackingIsLost(now);
                 bodyMarkerRef.current = null;
                 setGuideZone('NONE');
 
@@ -536,19 +566,13 @@ export function usePoseDetection({
                 );
               } else {
                 lostFramesRef.current = 0;
+                trackingLostStartedAtRef.current = 0;
+                const rawMetrics = getPoseMetrics(landmarks);
                 const metrics = smoothMetrics(
                   smoothedMetricsRef.current,
-                  getPoseMetrics(landmarks),
+                  rawMetrics,
                 );
                 smoothedMetricsRef.current = metrics;
-
-                if (
-                  phaseRef.current === 'CALIBRATION' &&
-                  !guideCenterLockedRef.current
-                ) {
-                  guideCenterXRef.current = metrics.shoulderCenterX;
-                  guideCenterLockedRef.current = true;
-                }
 
                 const adjustedCenterX = clamp01(
                   metrics.shoulderCenterX + (0.5 - guideCenterXRef.current),
@@ -768,7 +792,9 @@ export function usePoseDetection({
                     setLane(targetLane);
                   }
 
-                  const squatCandidate = isSquat(metrics, baseline);
+                  const jumpCandidate = isJump(rawMetrics, baseline);
+                  const squatCandidate =
+                    isSquat(metrics, baseline) && !jumpCandidate;
                   const currentGame = useGameStore.getState();
 
                   if (squatCandidate) {
@@ -791,14 +817,13 @@ export function usePoseDetection({
                     setPoseSquatting(false);
                   }
 
-                  if (!squatCandidate && isJump(metrics, baseline)) {
+                  if (jumpCandidate) {
                     jumpFramesRef.current += 1;
                   } else {
                     jumpFramesRef.current = 0;
                   }
 
                   if (
-                    !squatCandidate &&
                     jumpFramesRef.current >= MOTION_CONFIG.jumpConfirmFrames &&
                     now - lastJumpAtRef.current >= MOTION_CONFIG.jumpCooldownMs
                   ) {
@@ -853,6 +878,7 @@ export function usePoseDetection({
   }, [
     beginCountdown,
     canvasRef,
+    pauseRun,
     setBaseline,
     setCalibrationUi,
     setLane,

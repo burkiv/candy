@@ -13,7 +13,9 @@ import type {
   LeaderboardStatus,
   Obstacle,
   ObstacleType,
+  PauseReason,
   ProgressionState,
+  RunMode,
   WorldId,
 } from '../types';
 import {
@@ -78,6 +80,8 @@ interface AudioSettingsState {
 interface GameState {
   phase: GamePhase;
   controlMode: ControlMode | null;
+  runMode: RunMode;
+  pauseReason: PauseReason | null;
   selectedWorld: WorldId;
   readyWorlds: Partial<Record<WorldId, boolean>>;
   audioSettings: AudioSettingsState;
@@ -120,6 +124,7 @@ interface GameState {
   startKeyboardRun: () => void;
   startCalibration: () => void;
   restartRun: () => void;
+  setRunMode: (mode: RunMode) => void;
   setSelectedWorld: (world: WorldId) => void;
   markWorldReady: (world: WorldId) => void;
   setAudioSetting: <K extends keyof AudioSettingsState>(
@@ -133,7 +138,7 @@ interface GameState {
   submitLeaderboardScore: () => Promise<void>;
   beginCountdown: () => void;
   startRun: () => void;
-  pauseRun: () => void;
+  pauseRun: (reason?: PauseReason) => void;
   resumeRun: () => void;
   returnToMenu: () => void;
   setCountdown: (value: number) => void;
@@ -479,6 +484,7 @@ function createRunReset(
   return {
     phase,
     controlMode,
+    pauseReason: null,
     countdown: 3,
     score: 0,
     time: 0,
@@ -515,6 +521,8 @@ function createRunReset(
 export const useGameStore = create<GameState>((set, get) => ({
   phase: 'MENU',
   controlMode: null,
+  runMode: 'SCORE',
+  pauseReason: null,
   selectedWorld: readSelectedWorld(),
   readyWorlds: {},
   audioSettings: readAudioSettings(),
@@ -577,6 +585,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         highScore: state.highScore,
       };
     }),
+  setRunMode: (runMode) => set({ runMode }),
   setSelectedWorld: (world) =>
     set((state) =>
       state.selectedWorld === world || !isWorldUnlocked(state.progression, world)
@@ -688,7 +697,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const state = get();
     const name = state.playerName.trim();
 
-    if (!name) {
+    if (!name || state.runMode === 'ENDLESS') {
       return;
     }
 
@@ -712,6 +721,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   beginCountdown: () =>
     set({
       phase: 'COUNTDOWN',
+      pauseReason: null,
       countdown: 3,
       gesture: null,
       gestureTimeLeft: 0,
@@ -719,6 +729,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   startRun: () =>
     set((state) => ({
       phase: 'PLAYING',
+      pauseReason: null,
       countdown: 3,
       score: 0,
       time: 0,
@@ -748,12 +759,13 @@ export const useGameStore = create<GameState>((set, get) => ({
       baseline: state.baseline ?? DEFAULT_BASELINE,
       poseConfidence: state.poseConfidence,
     })),
-  pauseRun: () =>
+  pauseRun: (reason = 'MANUAL') =>
     set((state) =>
       state.phase !== 'PLAYING'
         ? state
         : {
             phase: 'PAUSED',
+            pauseReason: reason,
           },
     ),
   resumeRun: () =>
@@ -762,6 +774,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         ? state
         : {
             phase: 'PLAYING',
+            pauseReason: null,
           },
     ),
   returnToMenu: () =>
@@ -886,7 +899,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       let starsCollected = state.starsCollected;
       let coinsEarnedThisFrame = 0;
       let starsEarnedThisFrame = 0;
-      let nextScore = state.score + delta * SCORE_RATE * nextSpeed;
+      let nextScore =
+        state.runMode === 'SCORE'
+          ? state.score + delta * SCORE_RATE * nextSpeed
+          : 0;
       let collisionsThisFrame = 0;
 
       const movedObstacles = state.obstacles
@@ -921,7 +937,9 @@ export const useGameStore = create<GameState>((set, get) => ({
 
           if (!obstacle.passed && passed && !collisionReported) {
             avoided += 1;
-            nextScore += AVOID_BONUS;
+            if (state.runMode === 'SCORE') {
+              nextScore += AVOID_BONUS;
+            }
           }
 
           if (
@@ -954,11 +972,15 @@ export const useGameStore = create<GameState>((set, get) => ({
             if (collectible.type === 'STAR') {
               starsCollected += 1;
               starsEarnedThisFrame += 1;
-              nextScore += STAR_SCORE_BONUS;
+              if (state.runMode === 'SCORE') {
+                nextScore += STAR_SCORE_BONUS;
+              }
             } else {
               coinsCollected += 1;
               coinsEarnedThisFrame += 1;
-              nextScore += COIN_SCORE_BONUS;
+              if (state.runMode === 'SCORE') {
+                nextScore += COIN_SCORE_BONUS;
+              }
             }
           }
 
@@ -979,7 +1001,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         (collision ? 0.48 : state.impactTimeLeft) - delta,
       );
       const nextProgression =
-        coinsEarnedThisFrame > 0 || starsEarnedThisFrame > 0
+        state.runMode === 'SCORE' &&
+        (coinsEarnedThisFrame > 0 || starsEarnedThisFrame > 0)
           ? writeProgression(
               addWalletRewards(state.progression, {
                 coins: coinsEarnedThisFrame,
@@ -988,7 +1011,12 @@ export const useGameStore = create<GameState>((set, get) => ({
             )
           : state.progression;
 
-      if (collision && !state.invincibleMode && nextHitCooldownTime <= 0) {
+      if (
+        collision &&
+        state.runMode === 'SCORE' &&
+        !state.invincibleMode &&
+        nextHitCooldownTime <= 0
+      ) {
         const nextLives = Math.max(0, state.livesRemaining - 1);
         const penalizedScore = Math.max(0, nextScore - HIT_SCORE_PENALTY);
 

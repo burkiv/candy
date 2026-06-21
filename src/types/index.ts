@@ -7,6 +7,8 @@ export type GamePhase =
   | 'GAME_OVER';
 
 export type ControlMode = 'KEYBOARD' | 'CAMERA';
+export type RunMode = 'SCORE' | 'ENDLESS';
+export type PauseReason = 'MANUAL' | 'TRACKING_LOST';
 export type CalibrationStep = 'CENTER' | 'CROUCH' | 'READY';
 export type LeaderboardStatus = 'idle' | 'loading' | 'ready' | 'error';
 

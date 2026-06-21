@@ -27,19 +27,24 @@ function LaneIndicator() {
 
 function LivesBanner() {
   const livesRemaining = useGameStore((state) => state.livesRemaining);
+  const runMode = useGameStore((state) => state.runMode);
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center">
       <div className="rounded-lg border border-white/10 bg-black/40 px-5 py-3 shadow-hud backdrop-blur-md">
         <div className="text-center text-[11px] uppercase tracking-[0.2em] text-white/55">
-          Can
+          {runMode === 'ENDLESS' ? 'Spor Modu' : 'Can'}
         </div>
         <div className="mt-1 flex items-center justify-center gap-2 text-3xl leading-none sm:text-4xl">
-          {Array.from({ length: livesRemaining }).map((_, index) => (
-            <span key={index} aria-hidden="true">
-              {'\u2764\uFE0F'}
-            </span>
-          ))}
+          {runMode === 'ENDLESS' ? (
+            <span className="font-black text-emerald-300">∞</span>
+          ) : (
+            Array.from({ length: livesRemaining }).map((_, index) => (
+              <span key={index} aria-hidden="true">
+                {'\u2764\uFE0F'}
+              </span>
+            ))
+          )}
         </div>
       </div>
     </div>
@@ -48,6 +53,7 @@ function LivesBanner() {
 
 export function HUD() {
   const score = useGameStore((state) => state.score);
+  const runMode = useGameStore((state) => state.runMode);
   const highScore = useGameStore((state) => state.highScore);
   const time = useGameStore((state) => state.time);
   const distance = useGameStore((state) => state.distance);
@@ -80,6 +86,11 @@ export function HUD() {
             Candy Run
           </div>
           <div className="mt-2 flex items-center gap-2">
+            {runMode === 'ENDLESS' ? (
+              <div className="rounded bg-emerald-400/15 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-300">
+                Sonsuz Spor
+              </div>
+            ) : null}
             {invincibleMode ? (
               <div className="rounded bg-emerald-400/15 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-300">
                 Test Modu
@@ -92,7 +103,7 @@ export function HUD() {
             ) : null}
           </div>
           <div className="mt-2 text-4xl font-black leading-none">
-            {Math.floor(score)}
+            {runMode === 'ENDLESS' ? distanceLabel : Math.floor(score)}
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3 text-sm text-white/80">
             <div>
@@ -117,7 +128,9 @@ export function HUD() {
             </div>
             <div>
               <div className="text-white/45">Rekor</div>
-              <div className="mt-1 font-semibold text-amber-300">{highScore}</div>
+              <div className="mt-1 font-semibold text-amber-300">
+                {runMode === 'ENDLESS' ? 'Kayıt dışı' : highScore}
+              </div>
             </div>
             <div>
               <div className="text-white/45">Sonraki Hız</div>

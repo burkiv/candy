@@ -3,7 +3,8 @@ export const MOTION_CONFIG = {
   calibrationCrouchDurationMs: 1500,
   calibrationStartHoldMs: 3000,
   calibrationMinSamples: 10,
-  detectionIntervalMs: 1000 / 15,
+  detectionIntervalMs: 1000 / 18,
+  trackingLostPauseMs: 2500,
   minPoseConfidence: 0.30,
   guideLeftBoundary: 0.28,
   guideRightBoundary: 0.72,
@@ -22,8 +23,8 @@ export const MOTION_CONFIG = {
   squatEnterFrames: 2,
   squatExitFrames: 3,
   jumpConfirmFrames: 2,
-  cameraWidth: 320,
-  cameraHeight: 240,
+  cameraWidth: 640,
+  cameraHeight: 480,
   handRaiseShoulderMargin: 0.035,
 } as const;
 

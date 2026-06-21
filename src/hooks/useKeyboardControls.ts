@@ -88,7 +88,7 @@ export function useKeyboardControls() {
         return;
       }
 
-      if (key === 'i' && !event.repeat) {
+      if ((key === 'i' || key === 'ı') && !event.repeat) {
         event.preventDefault();
         toggleInvincibleMode();
         return;
