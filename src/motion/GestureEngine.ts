@@ -4,6 +4,10 @@ import { MOTION_CONFIG } from './config';
 
 const KEY_CONFIDENCE_POINTS = [11, 12, 23, 24, 25, 26] as const;
 
+type LandmarkWithPresence = NormalizedLandmark & {
+  presence?: number;
+};
+
 function average(values: number[]): number {
   if (values.length === 0) {
     return 0;
@@ -18,13 +22,14 @@ function mirroredX(value: number): number {
 
 function landmarkScore(landmark: NormalizedLandmark): number {
   const values: number[] = [];
+  const presence = (landmark as LandmarkWithPresence).presence;
 
   if (typeof landmark.visibility === 'number') {
     values.push(landmark.visibility);
   }
 
-  if (typeof landmark.presence === 'number') {
-    values.push(landmark.presence);
+  if (typeof presence === 'number') {
+    values.push(presence);
   }
 
   return average(values);
@@ -85,13 +90,14 @@ export function getPoseConfidence(landmarks: NormalizedLandmark[]): number {
   const confidenceValues = KEY_CONFIDENCE_POINTS.flatMap((index) => {
     const landmark = landmarks[index];
     const values: number[] = [];
+    const presence = (landmark as LandmarkWithPresence).presence;
 
     if (typeof landmark.visibility === 'number') {
       values.push(landmark.visibility);
     }
 
-    if (typeof landmark.presence === 'number') {
-      values.push(landmark.presence);
+    if (typeof presence === 'number') {
+      values.push(presence);
     }
 
     return values;

@@ -6,11 +6,10 @@ import { BackSide, Color } from 'three';
 import { ModelAsset } from '../../game/ModelAsset';
 import { useGameStore } from '../../stores/gameStore';
 import {
-  BASE_WORLD_SPEED,
   PLAYER_Z,
-  PREVIEW_WORLD_SPEED,
   TUNNEL_SEGMENT_COUNT,
   TUNNEL_SEGMENT_LENGTH,
+  getWorldScrollSpeed,
 } from '../../utils/constants';
 
 const OCEAN_ROAD_WIDTH = 8.8;
@@ -377,9 +376,7 @@ export function OceanTunnel() {
   const speed = useGameStore((state) => state.speed);
 
   useFrame((_, delta) => {
-    const scrollSpeed =
-      (phase === 'PLAYING' ? BASE_WORLD_SPEED * speed : PREVIEW_WORLD_SPEED) *
-      delta;
+    const scrollSpeed = getWorldScrollSpeed(phase, speed) * delta;
     const totalLength = TUNNEL_SEGMENT_COUNT * TUNNEL_SEGMENT_LENGTH;
 
     segments.current.forEach((segment) => {

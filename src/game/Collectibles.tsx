@@ -6,7 +6,7 @@ import { useGameStore } from '../stores/gameStore';
 import { LANE_POSITIONS } from '../utils/constants';
 import { ModelAsset } from './ModelAsset';
 
-type CollectibleConfig = {
+export type CollectibleConfig = {
   path: string;
   targetWidth: number;
   targetHeight: number;
@@ -21,7 +21,7 @@ type CollectibleConfig = {
   baseRotation?: [number, number, number];
 };
 
-const COLLECTIBLE_CONFIGS: Record<CollectibleType, CollectibleConfig> = {
+export const COLLECTIBLE_CONFIGS: Record<CollectibleType, CollectibleConfig> = {
   COIN: {
     path: '/models/coin.glb',
     targetWidth: 0.95,

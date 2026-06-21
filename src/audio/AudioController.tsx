@@ -52,6 +52,7 @@ function createLoopingSound(config: WorldAudioLoopConfig) {
     loop: true,
     volume: config.volume,
     html5: config.html5,
+    preload: config.html5 ? false : true,
   });
 }
 
@@ -133,14 +134,7 @@ export function AudioController() {
     }
   }
 
-  function stopWorldAudio() {
-    clearOccasionalTimer();
-    const bank = worldSoundBankRef.current;
-
-    if (!bank) {
-      return;
-    }
-
+  function stopWorldAudio(bank: WorldSoundBank) {
     bank.music.stop();
     bank.ambience?.stop();
     bank.occasional?.stop();
@@ -250,7 +244,8 @@ export function AudioController() {
     }
 
     return () => {
-      stopWorldAudio();
+      clearOccasionalTimer();
+      stopWorldAudio(bank);
       Object.values(bank).forEach((sound) => sound?.unload());
 
       if (worldSoundBankRef.current === bank) {
@@ -300,11 +295,11 @@ export function AudioController() {
       scheduleOccasional();
     }
 
-    window.addEventListener('pointerdown', unlockAudio, { once: true });
+    window.addEventListener('click', unlockAudio, { once: true });
     window.addEventListener('keydown', unlockAudio, { once: true });
 
     return () => {
-      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('click', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
     };
   }, [phase, selectedWorld]);

@@ -1,4 +1,10 @@
-import type { Baseline, CalibrationUiState, ControlMode, Lane } from '../types';
+import type {
+  Baseline,
+  CalibrationUiState,
+  ControlMode,
+  GamePhase,
+  Lane,
+} from '../types';
 
 export const LANE_WIDTH = 2.8;
 
@@ -41,6 +47,18 @@ export const TRACK_SEGMENT_LENGTH = 6;
 export const TRACK_SEGMENT_COUNT = 24;
 
 export const GESTURE_LABEL_DURATION = 0.42;
+
+export function getWorldScrollSpeed(phase: GamePhase, speed: number) {
+  if (phase === 'PLAYING') {
+    return BASE_WORLD_SPEED * speed;
+  }
+
+  if (phase === 'PAUSED' || phase === 'GAME_OVER') {
+    return 0;
+  }
+
+  return PREVIEW_WORLD_SPEED;
+}
 
 export const DEFAULT_BASELINE: Baseline = {
   centerX: 0.5,

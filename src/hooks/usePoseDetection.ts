@@ -475,12 +475,6 @@ export function usePoseDetection({
 
         const context = canvas.getContext('2d');
         if (context) {
-          drawGuide(context, canvas, bodyMarkerRef.current, {
-            calibrationStep: calibrationRef.current.step,
-            showCalibrationGhost: phaseRef.current === 'CALIBRATION',
-            handRaised: calibrationRef.current.handRaisedAt > 0,
-          });
-
           const landmarker = landmarkerRef.current;
           const now = performance.now();
           const shouldDetect =
@@ -834,13 +828,14 @@ export function usePoseDetection({
               }
             }
 
-            drawGuide(context, canvas, bodyMarkerRef.current, {
-              calibrationStep: calibrationRef.current.step,
-              showCalibrationGhost: phaseRef.current === 'CALIBRATION',
-              handRaised: calibrationRef.current.handRaisedAt > 0,
-            });
             result.close();
           }
+
+          drawGuide(context, canvas, bodyMarkerRef.current, {
+            calibrationStep: calibrationRef.current.step,
+            showCalibrationGhost: phaseRef.current === 'CALIBRATION',
+            handRaised: calibrationRef.current.handRaisedAt > 0,
+          });
         }
       }
 

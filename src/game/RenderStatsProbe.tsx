@@ -7,9 +7,15 @@ export function RenderStatsProbe() {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const cooldownRef = useRef(0);
+  const invincibleMode = useGameStore((state) => state.invincibleMode);
   const setRenderStats = useGameStore((state) => state.setRenderStats);
 
   useFrame((_, delta) => {
+    if (!invincibleMode) {
+      cooldownRef.current = 0;
+      return;
+    }
+
     cooldownRef.current -= delta;
 
     if (cooldownRef.current > 0) {

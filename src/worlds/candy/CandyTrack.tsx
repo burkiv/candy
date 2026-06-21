@@ -3,12 +3,11 @@ import { useRef } from 'react';
 import type * as THREE from 'three';
 import { useGameStore } from '../../stores/gameStore';
 import {
-  BASE_WORLD_SPEED,
   LANE_POSITIONS,
   PLAYER_Z,
-  PREVIEW_WORLD_SPEED,
   TRACK_SEGMENT_COUNT,
   TRACK_SEGMENT_LENGTH,
+  getWorldScrollSpeed,
 } from '../../utils/constants';
 
 const railOffsets = [-0.46, 0.46] as const;
@@ -19,9 +18,7 @@ export function CandyTrack() {
   const speed = useGameStore((state) => state.speed);
 
   useFrame((_, delta) => {
-    const scrollSpeed =
-      (phase === 'PLAYING' ? BASE_WORLD_SPEED * speed : PREVIEW_WORLD_SPEED) *
-      delta;
+    const scrollSpeed = getWorldScrollSpeed(phase, speed) * delta;
     const totalLength = TRACK_SEGMENT_COUNT * TRACK_SEGMENT_LENGTH;
 
     segments.current.forEach((segment) => {

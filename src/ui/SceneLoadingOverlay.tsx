@@ -31,7 +31,10 @@ export function SceneLoadingOverlay() {
 
   const world = worldDefinitions[selectedWorld];
   const percent = formatPercent(progress);
-  const resolvedPercent = total > 0 && loaded >= total ? 100 : percent;
+  const assetsLoaded = total > 0 && loaded >= total;
+  const resolvedPercent = assetsLoaded ? 100 : percent;
+  const itemLabel =
+    assetsLoaded && !isReady ? 'Grafikler hazirlaniyor' : formatItemLabel(item);
 
   return (
     <div className="absolute inset-0 z-40 overflow-hidden">
@@ -62,7 +65,7 @@ export function SceneLoadingOverlay() {
           </div>
 
           <div className="mt-3 flex items-center justify-between gap-4 text-sm">
-            <div className="font-semibold text-white/72">{formatItemLabel(item)}</div>
+            <div className="font-semibold text-white/72">{itemLabel}</div>
             <div className="font-black text-cyan-200">{resolvedPercent}%</div>
           </div>
 

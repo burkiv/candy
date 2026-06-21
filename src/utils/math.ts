@@ -17,7 +17,10 @@ export function clampLane(lane: number): Lane {
 }
 
 export function laneCenter(lanes: Lane[]): number {
-  const total = lanes.reduce((sum, lane) => sum + LANE_POSITIONS[lane], 0);
+  const total = lanes.reduce<number>(
+    (sum, lane) => sum + LANE_POSITIONS[lane],
+    0,
+  );
   return total / lanes.length;
 }
 

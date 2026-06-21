@@ -1,6 +1,7 @@
 import { useGLTF } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo } from 'react';
+import { useGameStore } from '../stores/gameStore';
 import type { WorldId } from '../types';
 import { useWorldDefinition } from '../worlds';
 import { Collectibles } from './Collectibles';
@@ -10,6 +11,7 @@ import { Obstacles } from './Obstacles';
 import { PlayerCamera } from './PlayerCamera';
 import { Rails } from './Rails';
 import { RenderStatsProbe } from './RenderStatsProbe';
+import { SceneWarmup } from './SceneWarmup';
 import { Tunnel } from './Tunnel';
 
 const COMMON_PRELOAD_MODEL_PATHS = ['/models/coin.glb', '/models/star.glb'];
@@ -26,6 +28,9 @@ function SceneContent({
 }) {
   const world = useWorldDefinition();
   const { gl } = useThree();
+  const isWorldReady = useGameStore(
+    (state) => state.readyWorlds[world.id] === true,
+  );
   const preloadPaths = useMemo(
     () => [...COMMON_PRELOAD_MODEL_PATHS, ...world.preloadModelPaths],
     [world.preloadModelPaths],
@@ -34,10 +39,6 @@ function SceneContent({
   useEffect(() => {
     gl.toneMappingExposure = world.scene.exposure ?? 1.15;
   }, [gl, world.scene.exposure]);
-
-  useEffect(() => {
-    onWorldReady(world.id);
-  }, [onWorldReady, world.id]);
 
   return (
     <>
@@ -53,6 +54,10 @@ function SceneContent({
         <PlayerCamera />
         <GameLoop />
         <RenderStatsProbe />
+        <SceneWarmup
+          ready={isWorldReady}
+          onReady={() => onWorldReady(world.id)}
+        />
       </group>
     </>
   );
